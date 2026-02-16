@@ -1,2 +1,2 @@
 # BBTP
-Baza testów psychologicnzych do programu PsyhcoLauncher
+Baza testów psychologicnzych do programu Nous
