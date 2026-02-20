@@ -1,4 +1,4 @@
-﻿/************ 
+/************ 
  * Syg *
  ************/
 
@@ -203,6 +203,34 @@ async function experimentInit() {
       psychoJS.experiment.save = function() {
           return Promise.resolve(); 
       };
+  }
+  // --- Obsługa ekranu dotykowego (klik w samochód) ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
   }
   // Initialize components for Routine "feedback"
   feedbackClock = new util.Clock();
@@ -481,6 +509,10 @@ function trialRoutineBegin(snapshot) {
     trialClock = new util.Clock();
     clicked_side = null;
     rt = null;
+    // Reset stanu dotyku dla nowej próby
+    window._touchJustStarted = false;
+    window._touchPsychoX = null;
+    window._touchPsychoY = null;
     
     psychoJS.experiment.addData('trial.started', globalClock.getTime());
     trialMaxDuration = null
@@ -609,9 +641,18 @@ function trialRoutineEachFrame() {
       }
     }
     
-    // 2) Sprawdzanie wejścia (Klawiatura + Mysz)
+    // 2) Sprawdzanie wejścia (Klawiatura + Mysz + Dotyk)
     let buttons = mouse.getPressed();
     let theseKeys = psychoJS.eventManager.getKeys({keyList: ['left', 'right', 'a', 'd']});
+
+    function pointInStim(px, py, stim) {
+      let pos = stim.pos || stim._pos;
+      let size = stim.size || stim._size || [0.2, 0.2];
+      if (!pos || (typeof pos[0] !== 'number') || (typeof pos[1] !== 'number')) return false;
+      let hx = (Array.isArray(size) ? size[0] : size) / 2;
+      let hy = (Array.isArray(size) ? size[1] : size) / 2;
+      return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
+    }
     
     if (clicked_side === null) {
         
@@ -650,6 +691,34 @@ function trialRoutineEachFrame() {
                 clicked_side = "early";
                 rt = 0;
             }
+        }
+
+        // --- OBSŁUGA EKRANU DOTYKOWEGO (klik w samochód) ---
+        if (window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
+            let now = trialClock.getTime();
+            if (now >= 1.0) {
+                if (pointInStim(window._touchPsychoX, window._touchPsychoY, left_car)) {
+                    clicked_side = "left";
+                    rt = now - 1.0;
+                } else if (pointInStim(window._touchPsychoX, window._touchPsychoY, right_car)) {
+                    clicked_side = "right";
+                    rt = now - 1.0;
+                }
+            } else {
+                // Falstart dotykiem
+                if (pointInStim(window._touchPsychoX, window._touchPsychoY, left_car) ||
+                    pointInStim(window._touchPsychoX, window._touchPsychoY, right_car)) {
+                    clicked_side = "early";
+                    rt = 0;
+                }
+            }
+            window._touchJustStarted = false;
+            window._touchPsychoX = null;
+            window._touchPsychoY = null;
+        } else if (window._touchJustStarted) {
+            window._touchJustStarted = false;
+            window._touchPsychoX = null;
+            window._touchPsychoY = null;
         }
     }
     
@@ -884,64 +953,90 @@ async function quitPsychoJS(message, isCompleted) {
   }
   // --- NOUS INTEGRATION: SEND DATA ---
   if (typeof window.electronTest !== 'undefined') {
-      
+    if (isCompleted) {
       // 1. Pobieramy surowe dane
-      let rawData = psychoJS.experiment._trialsData;
-      
+      let rawData = psychoJS.experiment._trialsData || [];
+
       // 2. PRECYZYJNY FILTR: Zostawiamy tylko wiersze, które mają sensowny wynik
-      // Sprawdzamy, czy 'outcome' to jedna z trzech wartości z Twojego kodu
-      let allData = rawData.filter(trial => 
-          trial.outcome === 'correct' || 
-          trial.outcome === 'incorrect' || 
+      let allData = rawData.filter(trial =>
+          trial.outcome === 'correct' ||
+          trial.outcome === 'incorrect' ||
           trial.outcome === 'too_slow'
       );
-      
+
       // 3. Obliczenia na przefiltrowanej liście
-      let totalTrials = allData.length; 
+      let totalTrials = allData.length;
       let correctCount = 0;
       let totalRT = 0;
       let validRTCount = 0;
-  
+
+      // Główne zmienne standardu Nous
+      let poprawneNacisniecia = 0;
+      let bledneNacisniecia = 0;
+      let wszystkieNacisniecia = 0;
+
       for (let trial of allData) {
-          if (trial.outcome === 'correct') {
-              correctCount++;
-              if (typeof trial.rt === 'number' && trial.rt > 0) {
+          let hasClick = trial.clicked_side !== null; // 'left', 'right', 'early'
+          if (hasClick) {
+              wszystkieNacisniecia++;
+              if (trial.outcome === 'correct') {
+                  poprawneNacisniecia++;
+              } else if (trial.outcome === 'incorrect') {
+                  bledneNacisniecia++;
+              }
+              if (typeof trial.rt === 'number' && trial.rt >= 0) {
                   totalRT += trial.rt;
                   validRTCount++;
               }
           }
+
+          if (trial.outcome === 'correct') {
+              correctCount++;
+          }
       }
-  
+
       // RT w ms
-      let avgRT = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
       let accuracy = totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0;
-  
+
       let payload = {
           testId: expInfo['expName'] || "Sygnalizacja",
           subjectId: expInfo['participant'],
           timestamp: new Date().toISOString(),
-          
-          // GŁÓWNY WYNIK
-          czas_reakcji: avgRT, 
-          
-          // PODSUMOWANIE
-          score: `Śr. czas: ${avgRT} ms | Poprawne: ${correctCount}/${totalTrials} (${accuracy}%)`,
-          
+
+          // GŁÓWNY WYNIK (standaryzowane pola)
+          ilosc_poprawnych_nacisniec: poprawneNacisniecia,
+          ilosc_blednych_nacisniec: bledneNacisniecia,
+          ogolna_ilosc_nacisniec: wszystkieNacisniecia,
+          sredni_czas_reakcji: sredniCzasReakcji,
+
+          // Zachowane pole kompatybilności
+          czas_reakcji: sredniCzasReakcji,
+
+          // Ujednolicony format score
+          score: `Poprawne: ${poprawneNacisniecia} | Błędne: ${bledneNacisniecia} | Łącznie: ${wszystkieNacisniecia} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+
           statystyki: {
-              sredni_czas_ms: avgRT,
+              sredni_czas_ms: sredniCzasReakcji,
               poprawne: correctCount,
-              wszystkie_proby: totalTrials, // Tu musi być 10
-              skutecznosc: accuracy
+              wszystkie_proby: totalTrials,
+              skutecznosc: accuracy,
+              nacisniecia_poprawne: poprawneNacisniecia,
+              nacisniecia_bledne: bledneNacisniecia,
+              nacisniecia_lacznie: wszystkieNacisniecia
           },
-          
+
           wyniki: allData
       };
-  
+
       console.log("Wysyłanie do Nous...", payload);
       window.electronTest.sendResults(payload);
-  
+    } else {
+      // ESC lub anulowanie dialogu – wyjście bez zapisu
+      window.electronTest.close();
+    }
   } else {
-      console.log("Tryb przeglądarki.");
+    console.log("Tryb przeglądarki.");
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});

@@ -58,6 +58,7 @@ def main():
         allowGUI=False,
     )
     mouse = event.Mouse(win=win)
+    mouse.setVisible(True)
 
     # Ekran instrukcji
     instr = visual.TextStim(

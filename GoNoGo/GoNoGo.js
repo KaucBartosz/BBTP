@@ -1,4 +1,4 @@
-﻿/*************** 
+/*************** 
  * Gonogo *
  ***************/
 
@@ -210,7 +210,36 @@ async function experimentInit() {
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
-  
+
+  // --- Obsługa ekranu dotykowego (GO = dowolne dotknięcie) ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
+
   return Scheduler.Event.NEXT;
 }
 
@@ -668,6 +697,12 @@ function trialRoutineBegin(snapshot) {
     key_resp.rt = undefined;
     _key_resp_allKeys = [];
     numberStim.setText(currentNumber);
+
+    // Reset stanu dotyku na początek próby
+    window._touchJustStarted = false;
+    window._touchPsychoX = null;
+    window._touchPsychoY = null;
+
     psychoJS.experiment.addData('trial.started', globalClock.getTime());
     trialMaxDuration = null
     // keep track of which components have finished
@@ -725,6 +760,20 @@ function trialRoutineEachFrame() {
       // if key_resp is active this frame...
       if (key_resp.status === PsychoJS.Status.STARTED) {
         let theseKeys = key_resp.getKeys({keyList: 'space', waitRelease: false});
+
+        // Dotyk ekranu traktujemy jak naciśnięcie SPACJI (GO)
+        if (window._touchJustStarted && window._touchCanvas) {
+          let fakeKey = {
+            name: 'space',
+            rt: key_resp.clock.getTime(),
+            duration: 0
+          };
+          theseKeys = theseKeys.concat([fakeKey]);
+          window._touchJustStarted = false;
+          window._touchPsychoX = null;
+          window._touchPsychoY = null;
+        }
+
         _key_resp_allKeys = _key_resp_allKeys.concat(theseKeys);
         if (_key_resp_allKeys.length > 0) {
           key_resp.keys = _key_resp_allKeys[_key_resp_allKeys.length - 1].name;  // just the last key pressed
@@ -1008,102 +1057,135 @@ function importConditions(currentLoop) {
   
   
 async function quitPsychoJS(message, isCompleted) {
-    // Check for and save orphaned data
-    if (psychoJS.experiment.isEntryEmpty()) {
-      psychoJS.experiment.nextEntry();
-    }
-    // --- NOUS INTEGRATION: SEND DATA ---
-    if (typeof window.electronTest !== 'undefined') {
-        
-        let rawData = psychoJS.experiment._trialsData;
-        // Filtrujemy tylko te wiersze, które są faktycznymi próbami (mają ocenę poprawności)
-        let allData = rawData.filter(trial => trial.hasOwnProperty('was_correct')); 
-        
-        let goTrials = 0;
-        let nogoTrials = 0;
-        let hits = 0;
-        let misses = 0;
-        let correctRejects = 0;
-        let falseAlarms = 0;
-        let totalRT = 0;
-        let hitRTCount = 0;
-    
-        for (let trial of allData) {
-            // Bezpieczne pobieranie RT
-            let currentRT = 0;
-            let hasRT = false;
-            
-            if (trial.key_resp && trial.key_resp.rt) {
-                 if (Array.isArray(trial.key_resp.rt)) currentRT = trial.key_resp.rt[0];
-                 else currentRT = trial.key_resp.rt;
-                 
-                 if (currentRT > 0) hasRT = true;
-            }
-    
-            if (trial.condition === 'go') {
-                goTrials++;
-                if (trial.was_correct) {
-                    hits++;
-                    if (hasRT) {
-                        totalRT += currentRT;
-                        hitRTCount++;
-                    }
-                } else {
-                    misses++;
-                }
-            } else if (trial.condition === 'nogo') {
-                nogoTrials++;
-                if (trial.was_correct) {
-                    correctRejects++;
-                } else {
-                    falseAlarms++;
-                }
-            }
-        }
-    
-        // Obliczenia statystyczne
-        let avgRT = hitRTCount > 0 ? Math.round((totalRT / hitRTCount) * 1000) : 0;
-        let totalTrials = goTrials + nogoTrials;
-        let totalCorrect = hits + correctRejects;
-        let accuracy = totalTrials > 0 ? Math.round((totalCorrect / totalTrials) * 100) : 0;
-        let faRate = nogoTrials > 0 ? Math.round((falseAlarms / nogoTrials) * 100) : 0;
-    
-        // Budowa paczki danych
-        let payload = {
-            testId: "GoNoGo_Numbers",
-            subjectId: expInfo['participant'],
-            timestamp: new Date().toISOString(),
-            
-            // GŁÓWNY WYNIK
-            czas_reakcji: avgRT,
-            
-            // POZIOM TRUDNOŚCI (DODANE)
-            poziom_trudnosci: window.difficultyName || "Nieznany",
-            
-            // OPIS
-            score: `Poziom: ${window.difficultyName} | Celność: ${accuracy}% | Czas: ${avgRT}ms`,
-            
-            // SZCZEGÓŁY
-            statystyki: {
-                poprawne: totalCorrect,
-                wszystkie: totalTrials,
-                hits: hits,
-                misses: misses,
-                false_alarms: falseAlarms,
-                correct_rejections: correctRejects,
-                fa_rate_percent: faRate,
-                ustawiony_czas: window.decisionTime
-            },
-            
-            // SUROWE DANE
-            wyniki: allData
-        };
-    
-        console.log("Wysyłanie do Nous...", payload);
-        window.electronTest.sendResults(payload);
-    }
-    psychoJS.window.close();
-    psychoJS.quit({message: message, isCompleted: isCompleted});
-    
-    return Scheduler.Event.QUIT;
+  // Check for and save orphaned data
+  if (psychoJS.experiment.isEntryEmpty()) {
+    psychoJS.experiment.nextEntry();
   }
+
+  if (typeof window.electronTest !== 'undefined') {
+    if (isCompleted) {
+      let rawData = psychoJS.experiment._trialsData || [];
+      // tylko wiersze z prób (mają ocenę poprawności)
+      let allData = rawData.filter(trial => trial.hasOwnProperty('was_correct'));
+
+      let goTrials = 0;
+      let nogoTrials = 0;
+      let hits = 0;
+      let misses = 0;
+      let correctRejects = 0;
+      let falseAlarms = 0;
+
+      // Główne zmienne standardu Nous
+      let poprawneNacisniecia = 0;
+      let bledneNacisniecia = 0;
+      let wszystkieNacisniecia = 0;
+      let sumRT = 0;
+      let validRTCount = 0;
+
+      for (let trial of allData) {
+        let condition = trial.condition;
+        let wasCorrect = !!trial.was_correct;
+
+        // Czy w ogóle było naciśnięcie (klawisza / dotyku)?
+        let pressed = false;
+        if (trial.key_resp && typeof trial.key_resp.keys !== 'undefined') {
+          let k = trial.key_resp.keys;
+          if (Array.isArray(k)) {
+            pressed = k.length > 0 && (k[0] !== '');
+          } else if (typeof k === 'string') {
+            pressed = k.length > 0;
+          }
+        }
+
+        // RT z próby
+        let currentRT = null;
+        if (trial.key_resp && typeof trial.key_resp.rt !== 'undefined') {
+          if (Array.isArray(trial.key_resp.rt)) {
+            currentRT = trial.key_resp.rt[0];
+          } else {
+            currentRT = trial.key_resp.rt;
+          }
+        }
+
+        if (condition === 'go') {
+          goTrials++;
+          if (wasCorrect) {
+            hits++;
+          } else {
+            misses++;
+          }
+        } else if (condition === 'nogo') {
+          nogoTrials++;
+          if (wasCorrect) {
+            correctRejects++;
+          } else {
+            falseAlarms++;
+          }
+        }
+
+        if (pressed) {
+          wszystkieNacisniecia++;
+          if (wasCorrect) {
+            poprawneNacisniecia++;
+          } else {
+            bledneNacisniecia++;
+          }
+          if (typeof currentRT === 'number' && currentRT >= 0) {
+            sumRT += currentRT;
+            validRTCount++;
+          }
+        }
+      }
+
+      let totalTrials = goTrials + nogoTrials;
+      let totalCorrect = hits + correctRejects;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
+      let accuracy = totalTrials > 0 ? Math.round((totalCorrect / totalTrials) * 100) : 0;
+      let faRate = nogoTrials > 0 ? Math.round((falseAlarms / nogoTrials) * 100) : 0;
+
+      let payload = {
+        testId: "GoNoGo_Numbers",
+        subjectId: expInfo['participant'],
+        timestamp: new Date().toISOString(),
+
+        // Standaryzowane pola Nous
+        ilosc_poprawnych_nacisniec: poprawneNacisniecia,
+        ilosc_blednych_nacisniec: bledneNacisniecia,
+        ogolna_ilosc_nacisniec: wszystkieNacisniecia,
+        sredni_czas_reakcji: sredniCzasReakcji,
+
+        // Pole zachowane dla kompatybilności
+        czas_reakcji: sredniCzasReakcji,
+
+        // Dodatkowe informacje
+        poziom_trudnosci: window.difficultyName || "Nieznany",
+        score: `Poprawne: ${poprawneNacisniecia} | Błędne: ${bledneNacisniecia} | Łącznie: ${wszystkieNacisniecia} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms | Poziom: ${window.difficultyName}`,
+
+        statystyki: {
+          poprawne: totalCorrect,
+          wszystkie: totalTrials,
+          hits: hits,
+          misses: misses,
+          false_alarms: falseAlarms,
+          correct_rejections: correctRejects,
+          fa_rate_percent: faRate,
+          ustawiony_czas: window.decisionTime,
+          go_trials: goTrials,
+          nogo_trials: nogoTrials
+        },
+
+        wyniki: allData
+      };
+
+      console.log("Wysyłanie do Nous...", payload);
+      window.electronTest.sendResults(payload);
+    } else {
+      window.electronTest.close();
+    }
+  }
+
+  psychoJS.window.close();
+  psychoJS.quit({message: message, isCompleted: isCompleted});
+
+  return Scheduler.Event.QUIT;
+}

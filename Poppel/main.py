@@ -63,6 +63,7 @@ def main():
         allowGUI=False,
     )
     mouse = event.Mouse(win=win)
+    mouse.setVisible(True)
     trial_clock = core.Clock()
     frame_clock = core.Clock()
 

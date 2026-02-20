@@ -1,4 +1,4 @@
-﻿/************* 
+/************* 
  * Stop *
  *************/
 
@@ -189,6 +189,34 @@ async function experimentInit() {
           return Promise.resolve(); 
       };
   }                       
+  // --- Obsługa ekranu dotykowego (klik na auto / znak STOP) ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
@@ -476,6 +504,10 @@ function driveRoutineBegin(snapshot) {
     car_speed = 0.3;
     car_direction = 1;
     car.setPos([car_start_x, car_y]);
+    // Reset dotyku na początku próby
+    window._touchJustStarted = false;
+    window._touchPsychoX = null;
+    window._touchPsychoY = null;
     
     psychoJS.experiment.addData('drive.started', globalClock.getTime());
     driveMaxDuration = null
@@ -581,8 +613,15 @@ function driveRoutineEachFrame() {
       }
     }
     // Run 'Each Frame' code from code
-    
-    
+
+    function pointInStim(px, py, stim) {
+      let pos = stim.pos || stim._pos;
+      let size = stim.size || stim._size || [0.28, 0.28];
+      if (!pos || (typeof pos[0] !== 'number') || (typeof pos[1] !== 'number')) return false;
+      let hx = (Array.isArray(size) ? size[0] : size) / 2;
+      let hy = (Array.isArray(size) ? size[1] : size) / 2;
+      return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
+    }
     // --- ruch auta po osi X (między -0.5 a 0.5) ---
     let dt = 1.0 / 60.0;
     let pos = car.pos;
@@ -608,15 +647,33 @@ function driveRoutineEachFrame() {
       stopClock = new util.Clock();
     }
     
-    // --- klik w auto po STOP ---
+    // --- klik (mysz) w auto LUB znak STOP po pojawieniu się STOP ---
     let buttons = mouse.getPressed();
     if (stop_visible && !responded && (buttons[0] || buttons[1] || buttons[2])) {
-      if (mouse.isPressedIn(car)) {
+      if (mouse.isPressedIn(car) || mouse.isPressedIn(stopSign)) {
         responded = true;
         rt = stopClock.getTime();
         correct = 1;
         continueRoutine = false;
       }
+    }
+
+    // --- dotyk w auto lub znak STOP ---
+    if (stop_visible && !responded && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
+      if (pointInStim(window._touchPsychoX, window._touchPsychoY, car) ||
+          pointInStim(window._touchPsychoX, window._touchPsychoY, stopSign)) {
+        responded = true;
+        rt = stopClock.getTime();
+        correct = 1;
+        continueRoutine = false;
+      }
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
+    } else if (window._touchJustStarted) {
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
     }
     
     // --- limit czasu 10 s ---
@@ -703,65 +760,82 @@ async function quitPsychoJS(message, isCompleted) {
   // --- INTEGRACJA Z LAUNCHEREM (WYSYŁKA DANYCH) ---
   
   if (typeof window.electronTest !== 'undefined') {
-      
-      // Pobieramy surowe dane
-      let allData = psychoJS.experiment._trialsData;
-      
+    if (isCompleted) {
+      // Pobieramy surowe dane tylko z prób (mają pole 'correct')
+      let rawData = psychoJS.experiment._trialsData || [];
+      let allData = rawData.filter(trial => typeof trial.correct !== 'undefined');
+
       // Zmienne do statystyk
-      let totalRT = 0;
-      let correctCount = 0;     // Ile razy kliknięto poprawnie na znak STOP
-      let validTrialsCount = 0; // Ile było prób z poprawną reakcją
       let totalTrials = allData.length;
-  
+      let totalRT = 0;
+      let validRTCount = 0;
+      let correctCount = 0;         // poprawne reakcje (kliknięcie auto/STOP gdy znak widoczny)
+      let respondedCount = 0;       // wszystkie próby z reakcją (kliknięcie)
+      let incorrectResponses = 0;   // reakcje błędne
+
       // Analiza danych
       for (let trial of allData) {
-          // W twoim kodzie: correct = 1 (kliknięto w auto gdy był stop)
-          if (trial.correct === 1) {
-              correctCount++;
-              
-              // Czas reakcji (rt)
-              if (typeof trial.rt === 'number') {
+          let responded = !!trial.responded;
+          let isCorrect = trial.correct === 1;
+
+          if (responded) {
+              respondedCount++;
+              if (isCorrect) {
+                  correctCount++;
+              } else {
+                  incorrectResponses++;
+              }
+              if (typeof trial.rt === 'number' && trial.rt >= 0) {
                   totalRT += trial.rt;
-                  validTrialsCount++;
+                  validRTCount++;
               }
           }
       }
-  
+
       // Obliczenia (RT w ms)
-      let avgRT = validTrialsCount > 0 ? Math.round((totalRT / validTrialsCount) * 1000) : 0;
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
       let accuracy = totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0;
-  
+
       // Budujemy paczkę dla Launchera
       let payload = {
           testId: expInfo['expName'] || "Test Reakcji STOP",
           subjectId: expInfo['participant'],
           timestamp: new Date().toISOString(),
-          
-          // Główny wynik (do nagłówka modala)
-          czas_reakcji: avgRT, 
-          
-          // Tekst podsumowujący
-          score: `Średni czas: ${avgRT} ms | Poprawne: ${correctCount}/${totalTrials} (${accuracy}%)`,
-          
+
+          // Standaryzowane pola Nous
+          ilosc_poprawnych_nacisniec: correctCount,
+          ilosc_blednych_nacisniec: incorrectResponses,
+          ogolna_ilosc_nacisniec: respondedCount,
+          sredni_czas_reakcji: sredniCzasReakcji,
+
+          // Pole zachowane dla kompatybilności
+          czas_reakcji: sredniCzasReakcji,
+
+          // Ujednolicony format score
+          score: `Poprawne: ${correctCount} | Błędne: ${incorrectResponses} | Łącznie: ${respondedCount} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+
           // Statystyki szczegółowe
           statystyki: {
-              sredni_czas_ms: avgRT,
+              sredni_czas_ms: sredniCzasReakcji,
               poprawne_reakcje: correctCount,
               wszystkie_proby: totalTrials,
-              skutecznosc: accuracy
+              skutecznosc: accuracy,
+              reakcje: respondedCount,
+              bledne_reakcje: incorrectResponses
           },
-          
-          // Pełne dane (każde kliknięcie)
+
+          // Pełne dane (każda próba)
           wyniki: allData
       };
-  
+
       console.log("Wysyłanie danych do Launchera...", payload);
-      
-      // Wysyłamy i zamykamy
       window.electronTest.sendResults(payload);
-  
+    } else {
+      // ESC lub anulowanie dialogu – wyjście bez zapisu
+      window.electronTest.close();
+    }
   } else {
-      console.log("Tryb przeglądarki - standardowy zapis CSV.");
+    console.log("Tryb przeglądarki - standardowy zapis CSV.");
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});

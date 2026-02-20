@@ -166,6 +166,34 @@ async function experimentInit() {
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
+
+  // --- Obsługa ekranu dotykowego (NOUS) ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
   
   return Scheduler.Event.NEXT;
 }
@@ -274,10 +302,6 @@ function welcomeRoutineEachFrame() {
         continueRoutine = false; // Kończymy powitanie i zaczynamy test
     }
     
-    // Opcjonalnie: Wyjście z programu (Esc)
-    if (psychoJS.eventManager.getKeys({keyList: ['escape']}).length > 0) {
-        return quitPsychoJS('Użytkownik przerwał.', false);
-    }
     // check for quit (typically the Esc key)
     if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({keyList:['escape']}).length > 0) {
       return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
@@ -499,7 +523,17 @@ function trialRoutineEachFrame() {
         }
     }
     
-    // 2. Sprawdzanie kliknięcia w opcje odpowiedzi
+
+    function pointInStim(px, py, stim) {
+      let pos = stim.pos || stim._pos;
+      let size = stim.size || stim._size || [0.15, 0.15];
+      if (!pos || (typeof pos[0] !== 'number') || (typeof pos[1] !== 'number')) return false;
+      let hx = (Array.isArray(size) ? size[0] : size) / 2;
+      let hy = (Array.isArray(size) ? size[1] : size) / 2;
+      return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
+    }
+
+    // 2. Sprawdzanie kliknięcia w opcje odpowiedzi (mysz)
     if (!window.mouseLock && !window.responseGiven) {
         
         for (let i = 0; i < window.choiceStimuli.length; i++) {
@@ -536,11 +570,41 @@ function trialRoutineEachFrame() {
             }
         }
     }
-    
-    // 3. Wyjście awaryjne (Esc)
-    if (psychoJS.eventManager.getKeys({keyList: ['escape']}).length > 0) {
-        return quitPsychoJS('Użytkownik przerwał test.', false);
+
+    // 2b. Sprawdzanie dotyku w opcje odpowiedzi
+    if (!window.responseGiven && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
+      for (let i = 0; i < window.choiceStimuli.length; i++) {
+        let stim = window.choiceStimuli[i];
+        if (stim.opacity === 0) continue;
+        if (pointInStim(window._touchPsychoX, window._touchPsychoY, stim)) {
+          window.responseGiven = true;
+          let reactionTime = trialClock.getTime();
+          let allImages = [
+            'resources/bike.png',
+            'resources/car.png',
+            'resources/train.png',
+            'resources/tram.png'
+          ];
+          let clickedImageName = allImages[i];
+          let isCorrect = (clickedImageName === window.correctAnswer) ? 1 : 0;
+          window.score += isCorrect;
+          psychoJS.experiment.addData('rt', reactionTime);
+          psychoJS.experiment.addData('selected_image', clickedImageName);
+          psychoJS.experiment.addData('target_image', window.correctAnswer);
+          psychoJS.experiment.addData('correct', isCorrect);
+          continueRoutine = false;
+          break;
+        }
+      }
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
+    } else if (window._touchJustStarted) {
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
     }
+    
     // *mouse* updates
     if (t >= 0.0 && mouse.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
@@ -643,66 +707,57 @@ function importConditions(currentLoop) {
 
 
 async function quitPsychoJS(message, isCompleted) {
-  // Check for and save orphaned data
   if (psychoJS.experiment.isEntryEmpty()) {
     psychoJS.experiment.nextEntry();
   }
-  // --- NOUS INTEGRATION: SEND DATA ---
   if (typeof window.electronTest !== 'undefined') {
-      
-      let rawData = psychoJS.experiment._trialsData;
-      
-      // FILTR: Bierzemy tylko wiersze z faktycznymi odpowiedziami (pomijamy welcome)
-      let allData = rawData.filter(trial => trial.hasOwnProperty('correct'));
-      
-      let totalTrials = allData.length;
-      let correctCount = 0;
-      let totalRT = 0;
-      let validRTCount = 0;
-  
-      for (let trial of allData) {
-          if (trial.correct === 1) {
-              correctCount++;
-              if (typeof trial.rt === 'number') {
-                  totalRT += trial.rt;
-                  validRTCount++;
+      if (isCompleted) {
+          let allData = (psychoJS.experiment._trialsData || []).filter(function (t) { return typeof t.correct !== 'undefined'; });
+          let poprawneNacisniecia = 0;
+          let wszystkieNacisniecia = 0;
+          let sumRT = 0;
+          let validRTCount = 0;
+
+          for (let trial of allData) {
+              if (typeof trial.correct !== 'undefined') {
+                  wszystkieNacisniecia++;
+                  if (trial.correct === 1) {
+                      poprawneNacisniecia++;
+                  }
+                  if (typeof trial.rt === 'number' && trial.rt >= 0) {
+                      sumRT += trial.rt;
+                      validRTCount++;
+                  }
               }
           }
+
+          let bledneNacisniecia = Math.max(0, wszystkieNacisniecia - poprawneNacisniecia);
+          let sredniCzasReakcji = validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
+          let accuracy = wszystkieNacisniecia > 0 ? Math.round((poprawneNacisniecia / wszystkieNacisniecia) * 100) : 0;
+
+          window.electronTest.sendResults({
+              testId: expInfo['expName'] || 'Raven',
+              subjectId: expInfo['participant'],
+              timestamp: new Date().toISOString(),
+              ilosc_poprawnych_nacisniec: poprawneNacisniecia,
+              ilosc_blednych_nacisniec: bledneNacisniecia,
+              ogolna_ilosc_nacisniec: wszystkieNacisniecia,
+              sredni_czas_reakcji: sredniCzasReakcji,
+              score: `Poprawne: ${poprawneNacisniecia} | Błędne: ${bledneNacisniecia} | Łącznie: ${wszystkieNacisniecia} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+              statystyki: {
+                  poprawne: poprawneNacisniecia,
+                  bledne: bledneNacisniecia,
+                  wszystkie: wszystkieNacisniecia,
+                  skutecznosc_proc: accuracy,
+                  sredni_czas_ms: sredniCzasReakcji
+              },
+              wyniki: allData
+          });
+      } else {
+          window.electronTest.close();
       }
-  
-      let avgRT = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
-      let accuracy = totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0;
-  
-      let payload = {
-          testId: expInfo['expName'] || "Raven",
-          subjectId: expInfo['participant'],
-          timestamp: new Date().toISOString(),
-          
-          // GŁÓWNY WYNIK (W testach Raven to zazwyczaj punkty)
-          // Ale zgodnie z Twoim szablonem Nous, podaję też avgRT
-          czas_reakcji: avgRT, 
-          
-          // OPIS DLA UŻYTKOWNIKA
-          score: `Wynik: ${correctCount}/${totalTrials} (${accuracy}%) | Czas: ${avgRT}ms`,
-          
-          statystyki: {
-              punkty: correctCount,
-              wszystkie: totalTrials,
-              procent: accuracy,
-              sredni_czas: avgRT
-          },
-          
-          wyniki: allData
-      };
-  
-      console.log("Wysyłanie do Nous...", payload);
-      window.electronTest.sendResults(payload);
-  
-  } else {
-      console.log("Tryb przeglądarki.");
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});
-  
   return Scheduler.Event.QUIT;
 }
