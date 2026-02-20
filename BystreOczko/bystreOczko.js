@@ -1,4 +1,4 @@
-﻿/******************** 
+/******************** 
  * Bystreoczko *
  ********************/
 
@@ -18,6 +18,7 @@ let expInfo = {
     'session': '001',
 };
 let PILOTING = util.getUrlParameters().has('__pilotToken');
+const TRIAL_TIMEOUT_SEC = 10.0;  // limit czasu na próbę; przy minięciu dodawany do średniego RT
 
 // Start code blocks for 'Before Experiment'
 // init psychoJS:
@@ -118,7 +119,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Witaj!\nTwoim zadaniem jest jak najszybsze wciśnięcie sygnalizatora z zielonym śwaitłem.\nPowodzenia!',
+    text: 'Przed tobą pojawi się plansza z sygnalizatorami. W losowym interwale czasu jeden z nich zapali się na zielono. Twoim zadaniem jest naciśnięcie na sygnalizator z zielonym światłem. W przypadku poprawnego trafienia wszystkie zapalą się na zielono. W przypadku błędnego trafienia, wszystkie zgasną. Powodzenia!',
     font: 'Arial',
     units: undefined, 
     pos: [0, 0], draggable: false, height: 0.05,  wrapWidth: undefined, ori: 0.0,
@@ -185,7 +186,36 @@ async function experimentInit() {
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
-  
+
+  // --- EKRAN DOTYKOWY: konwersja touch -> PsychoJS "height" units ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
+
   return Scheduler.Event.NEXT;
 }
 
@@ -489,12 +519,21 @@ function trialRoutineEachFrame() {
         }
     }
     
-    // 3. Obsługa Kliknięcia
+    // 3. Obsługa kliknięcia (mysz) lub dotknięcia (ekran dotykowy)
     let buttons = mouse.getPressed();
     let isPressedNow = (buttons[0] || buttons[1] || buttons[2]);
     let isNewClick = isPressedNow && !window.prevMouseState;
     window.prevMouseState = isPressedNow;
-    
+
+    function pointInStim(px, py, stim) {
+      let pos = stim.pos || stim._pos;
+      let size = stim.size || stim._size || [0.12, 0.12];
+      if (!pos || (typeof pos[0] !== 'number') || (typeof pos[1] !== 'number')) return false;
+      let hx = (Array.isArray(size) ? size[0] : size) / 2;
+      let hy = (Array.isArray(size) ? size[1] : size) / 2;
+      return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
+    }
+
     if (window.green_is_on && !window.responded && isNewClick) {
         for (let r = 0; r < window.ROWS; r++) {
             for (let c = 0; c < window.COLS; c++) {
@@ -504,7 +543,6 @@ function trialRoutineEachFrame() {
                     window.clicked_col = c;
                     window.rt = window.rtClock.getTime();
                     window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-    
                     // Feedback wizualny
                     let feedbackImg = (window.correct === 1) ? 'resources/sygZiel.png' : 'resources/syg.png';
                     for (let rr = 0; rr < window.ROWS; rr++) {
@@ -519,13 +557,43 @@ function trialRoutineEachFrame() {
             if (window.responded) break;
         }
     }
+    // Ekran dotykowy: traktuj dotknięcie jak kliknięcie
+    if (window.green_is_on && !window.responded && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
+        for (let r = 0; r < window.ROWS; r++) {
+            for (let c = 0; c < window.COLS; c++) {
+                if (pointInStim(window._touchPsychoX, window._touchPsychoY, window.lights[r][c])) {
+                    window.responded = true;
+                    window.clicked_row = r;
+                    window.clicked_col = c;
+                    window.rt = window.rtClock.getTime();
+                    window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
+                    let feedbackImg = (window.correct === 1) ? 'resources/sygZiel.png' : 'resources/syg.png';
+                    for (let rr = 0; rr < window.ROWS; rr++) {
+                        for (let cc = 0; cc < window.COLS; cc++) {
+                            window.lights[rr][cc].setImage(feedbackImg);
+                        }
+                    }
+                    window.feedbackClock.reset();
+                    break;
+                }
+            }
+            if (window.responded) break;
+        }
+        window._touchJustStarted = false;
+        window._touchPsychoX = null;
+        window._touchPsychoY = null;
+    } else if (window._touchJustStarted) {
+        window._touchJustStarted = false;
+        window._touchPsychoX = null;
+        window._touchPsychoY = null;
+    }
     
     // 4. Koniec próby (po feedbacku lub po timeout)
     if (window.responded && window.feedbackClock.getTime() >= window.feedbackTime) {
         continueRoutine = false;
     }
     
-    if (currentTime >= 10.0) { // Timeout 10s
+    if (currentTime >= TRIAL_TIMEOUT_SEC) {
         continueRoutine = false;
     }
     // *mouse* updates
@@ -627,33 +695,42 @@ async function quitPsychoJS(message, isCompleted) {
     psychoJS.experiment.nextEntry();
   }
   if (typeof window.electronTest !== 'undefined') {
-      let allData = psychoJS.experiment._trialsData;
-      let totalRT = 0;
-      let validCount = 0;
-      let correctCount = 0;
-  
-      for (let trial of allData) {
-          if (trial.correct === 1) {
-              correctCount++;
-              if (typeof trial.rt === 'number' && trial.rt > 0) {
-                  totalRT += trial.rt;
-                  validCount++;
+      if (isCompleted) {
+          // Tylko wiersze z prób (pomijamy np. wiersz z rutyny welcome)
+          let allData = (psychoJS.experiment._trialsData || []).filter(function (t) { return typeof t.correct !== 'undefined'; });
+          let correctCount = 0;   // naciśnięcie na zielone
+          let wrongCount = 0;     // naciśnięcie na czerwone
+          let sumRT = 0;          // suma czasów reakcji (s); przy timeout +TRIAL_TIMEOUT_SEC
+
+          for (let trial of allData) {
+              if (trial.correct === 1) {
+                  correctCount++;
+              } else if (typeof trial.rt === 'number' && trial.rt >= 0) {
+                  wrongCount++;
               }
+              let rtSec = (typeof trial.rt === 'number' && trial.rt >= 0) ? trial.rt : TRIAL_TIMEOUT_SEC;
+              sumRT += rtSec;
           }
+
+          let totalClicks = correctCount + wrongCount;
+          let nTrials = allData.length;
+          let avgRTms = nTrials > 0 ? Math.round((sumRT / nTrials) * 1000) : 0;
+
+          window.electronTest.sendResults({
+              testId: expInfo['expName'],
+              subjectId: expInfo['participant'],
+              timestamp: new Date().toISOString(),
+              ilosc_poprawnych_nacisniec: correctCount,
+              ilosc_blednych_nacisniec: wrongCount,
+              ogolna_ilosc_nacisniec: totalClicks,
+              sredni_czas_reakcji: avgRTms,
+              czas_reakcji: avgRTms,
+              score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Łącznie: ${totalClicks} | Śr. RT: ${avgRTms} ms`,
+              wyniki: allData
+          });
+      } else {
+          window.electronTest.close();
       }
-      
-      let avgRT = validCount > 0 ? Math.round((totalRT / validCount) * 1000) : 0;
-      let accuracy = allData.length > 0 ? Math.round((correctCount / allData.length) * 100) : 0;
-  
-      window.electronTest.sendResults({
-          testId: expInfo['expName'],
-          subjectId: expInfo['participant'],
-          timestamp: new Date().toISOString(),
-          czas_reakcji: avgRT, 
-          score: `RT: ${avgRT}ms | Celność: ${accuracy}%`,
-          statystyki: { sredni_czas: avgRT, poprawne: correctCount, skutecznosc: accuracy },
-          wyniki: allData
-      });
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});
