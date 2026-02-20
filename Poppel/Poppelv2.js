@@ -644,8 +644,9 @@ async function quitPsychoJS(message, isCompleted) {
               subjectId: expInfo['participant'],
               timestamp: new Date().toISOString(),
 
-              ilosc_poprawnych_trafien: poprawneTrafienia,
-              ilosc_blednych_trafien: bledneTrafienia,
+              ilosc_poprawnych_nacisniec: poprawneTrafienia,
+              ilosc_blednych_nacisniec: bledneTrafienia,
+              ogolna_ilosc_nacisniec: wszystkieKliki,
               ilosc_obiektow_do_klikniecia: obiektyDoKlikniecia,
 
               score: `Poprawne: ${poprawneTrafienia} | Błędne: ${bledneTrafienia} | Obiektów do kliknięcia: ${obiektyDoKlikniecia} | Skuteczność: ${accuracy}%`,

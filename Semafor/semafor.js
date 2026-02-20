@@ -822,9 +822,9 @@ async function quitPsychoJS(message, isCompleted) {
               testId: expInfo['expName'] || 'semafor',
               subjectId: expInfo['participant'],
               timestamp: new Date().toISOString(),
-              ilosc_klikniec_ogolem: iloscKlikniecOgolem,
-              ilosc_poprawnych_trafien: poprawneTrafienia,
-              ilosc_blednych_trafien: bledneTrafienia,
+              ilosc_poprawnych_nacisniec: poprawneTrafienia,
+              ilosc_blednych_nacisniec: bledneTrafienia,
+              ogolna_ilosc_nacisniec: iloscKlikniecOgolem,
               score: `Kliknięć: ${iloscKlikniecOgolem} | Poprawne: ${poprawneTrafienia} | Błędne: ${bledneTrafienia} | Skuteczność: ${accuracy}%`,
               statystyki: {
                   poprawne: poprawneTrafienia,

@@ -234,8 +234,9 @@ def main():
         'testId': 'Poppelv2',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'ilosc_poprawnych_trafien': poprawne_trafienia,
-        'ilosc_blednych_trafien': bledne_trafienia,
+        'ilosc_poprawnych_nacisniec': poprawne_trafienia,
+        'ilosc_blednych_nacisniec': bledne_trafienia,
+        'ogolna_ilosc_nacisniec': total_presses,
         'ilosc_obiektow_do_klikniecia': obiekty_do_klikniecia,
         'score': f'Poprawne: {poprawne_trafienia} | Błędne: {bledne_trafienia} | Obiektów do kliknięcia: {obiekty_do_klikniecia} | Skuteczność: {accuracy}%',
         'statystyki': {

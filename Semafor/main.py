@@ -240,9 +240,9 @@ def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia
         'testId': 'semafor',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'ilosc_klikniec_ogolem': ilosc_klikniec_ogolem,
-        'ilosc_poprawnych_trafien': poprawne_trafienia,
-        'ilosc_blednych_trafien': bledne_trafienia,
+        'ilosc_poprawnych_nacisniec': poprawne_trafienia,
+        'ilosc_blednych_nacisniec': bledne_trafienia,
+        'ogolna_ilosc_nacisniec': ilosc_klikniec_ogolem,
         'score': f'Kliknięć: {ilosc_klikniec_ogolem} | Poprawne: {poprawne_trafienia} | Błędne: {bledne_trafienia} | Skuteczność: {accuracy}%',
         'statystyki': {
             'poprawne': poprawne_trafienia,
