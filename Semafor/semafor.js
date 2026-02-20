@@ -1,4 +1,4 @@
-﻿/**************** 
+/**************** 
  * Semafor *
  ****************/
 
@@ -120,10 +120,10 @@ async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
     name: 'welcomeText',
-    text: 'Witaj!\n\nNa ekranie zobaczysz siatkę lampek.\nNa krawędziach zapalą się dwie lampki – określają współrzędne.\nKliknij lampkę znajdującą się na ich przecięciu.\nMasz 10 sekund na reakcję.\n\nNaciśnij SPACJĘ, aby rozpocząć.\n',
+    text: 'Zapalają się dwie zielone lampki i naszym celem jest naciśnięcie na czerwoną lampkę na przecięciu ich prostych, tak jak na prawdziwym semaforze.\n\nNaciśnij SPACJĘ, aby rozpocząć.',
     font: 'Arial',
     units: undefined, 
-    pos: [0, 0], draggable: false, height: 0.05,  wrapWidth: undefined, ori: 0.0,
+    pos: [0, 0], draggable: false, height: 0.05,  wrapWidth: 1.8, ori: 0.0,
     languageStyle: 'LTR',
     color: new util.Color('white'),  opacity: undefined,
     depth: 0.0 
@@ -193,15 +193,6 @@ async function experimentInit() {
       }
     }
   }
-  // --- INTEGRACJA Z LAUNCHEREM (INIT) ---
-  if (typeof window.electronTest !== 'undefined') {
-      console.log("Wykryto PsychoLauncher. Blokowanie zapisu CSV.");
-      
-      // Nadpisujemy funkcję zapisu pustą obietnicą
-      psychoJS.experiment.save = function() {
-          return Promise.resolve(); 
-      };
-  }
   mouse = new core.Mouse({
     win: psychoJS.window,
   });
@@ -209,7 +200,36 @@ async function experimentInit() {
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
-  
+
+  // --- EKRAN DOTYKOWY ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
+
   return Scheduler.Event.NEXT;
 }
 
@@ -557,7 +577,7 @@ function trialRoutineBegin(snapshot) {
     correct = 0;
     feedbackClock = new util.Clock();
     show_feedback = false;
-    trialClock = new util.Clock();
+    trialClock.reset();
     
     // setup some python lists for storing info about the mouse
     // current position of the mouse:
@@ -600,23 +620,29 @@ function trialRoutineEachFrame() {
       }
     }
     
-    // 2) obsługa kliku
+    function pointInStim(px, py, stim) {
+      let pos = stim.pos || stim._pos;
+      let size = stim.size || stim._size || [0.08, 0.08];
+      if (!pos || (typeof pos[0] !== 'number') || (typeof pos[1] !== 'number')) return false;
+      let hx = (Array.isArray(size) ? size[0] : size) / 2;
+      let hy = (Array.isArray(size) ? size[1] : size) / 2;
+      return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
+    }
+
+    // 2) obsługa kliku (mysz) – pomijamy niewidoczne rogi (opacity 0)
     let buttons = mouse.getPressed();
-    
-    // klik tylko jeśli jeszcze nie ma feedbacku
     if ((buttons[0] || buttons[1] || buttons[2]) && show_feedback === false) {
       for (let ix = 0; ix < lamp_grid.length; ix++) {
         for (let iy = 0; iy < lamp_grid[ix].length; iy++) {
+          if (lamp_grid[ix][iy].opacity === 0) continue;
           if (mouse.isPressedIn(lamp_grid[ix][iy])) {
             clicked_x = ix;
             clicked_y = iy;
             rt = trialClock.getTime();
             correct = ((clicked_x === target_x) && (clicked_y === target_y)) ? 1 : 0;
-    
             if (correct === 1) {
               lamp_grid[clicked_x][clicked_y].setImage('resources/lampkaON.png');
             }
-    
             show_feedback = true;
             feedbackClock.reset();
             break;
@@ -624,6 +650,35 @@ function trialRoutineEachFrame() {
         }
         if (show_feedback === true) break;
       }
+    }
+
+    // 2b) obsługa dotyku (ekran dotykowy) – pomijamy niewidoczne rogi
+    if (show_feedback === false && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
+      for (let ix = 0; ix < lamp_grid.length; ix++) {
+        for (let iy = 0; iy < lamp_grid[ix].length; iy++) {
+          if (lamp_grid[ix][iy].opacity === 0) continue;
+          if (pointInStim(window._touchPsychoX, window._touchPsychoY, lamp_grid[ix][iy])) {
+            clicked_x = ix;
+            clicked_y = iy;
+            rt = trialClock.getTime();
+            correct = ((clicked_x === target_x) && (clicked_y === target_y)) ? 1 : 0;
+            if (correct === 1) {
+              lamp_grid[clicked_x][clicked_y].setImage('resources/lampkaON.png');
+            }
+            show_feedback = true;
+            feedbackClock.reset();
+            break;
+          }
+        }
+        if (show_feedback === true) break;
+      }
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
+    } else if (window._touchJustStarted) {
+      window._touchJustStarted = false;
+      window._touchPsychoX = null;
+      window._touchPsychoY = null;
     }
     
     // kończymy próbę po 0.5 s feedbacku
@@ -745,75 +800,46 @@ function importConditions(currentLoop) {
 
 
 async function quitPsychoJS(message, isCompleted) {
-  // Check for and save orphaned data
   if (psychoJS.experiment.isEntryEmpty()) {
     psychoJS.experiment.nextEntry();
   }
-  // --- INTEGRACJA Z LAUNCHEREM (WYSYŁKA DANYCH) ---
-  
   if (typeof window.electronTest !== 'undefined') {
-      
-      // Pobieramy dane ze wszystkich prób
-      let allData = psychoJS.experiment._trialsData;
-      
-      // Zmienne do statystyk
-      let totalRT = 0;
-      let correctCount = 0;
-      let validTrialsCount = 0;
-      let totalTrials = allData.length;
-  
-      // Analiza każdej próby
-      for (let trial of allData) {
-          // W twoim kodzie 'correct' to 1 lub 0
-          if (trial.correct === 1) {
-              correctCount++;
-              
-              // Czas reakcji zbieramy tylko dla poprawnych odpowiedzi
-              if (typeof trial.rt === 'number') {
-                  totalRT += trial.rt;
-                  validTrialsCount++;
+      if (isCompleted) {
+          let allData = (psychoJS.experiment._trialsData || []).filter(function (t) { return typeof t.correct !== 'undefined'; });
+          let poprawneTrafienia = 0;
+          let iloscKlikniecOgolem = 0;
+
+          for (let trial of allData) {
+              if (trial.clicked_x != null && trial.clicked_y != null) {
+                  iloscKlikniecOgolem++;
+                  if (trial.correct === 1) poprawneTrafienia++;
               }
           }
+          let bledneTrafienia = Math.max(0, iloscKlikniecOgolem - poprawneTrafienia);
+          let accuracy = iloscKlikniecOgolem > 0 ? Math.round((poprawneTrafienia / iloscKlikniecOgolem) * 100) : 0;
+
+          window.electronTest.sendResults({
+              testId: expInfo['expName'] || 'semafor',
+              subjectId: expInfo['participant'],
+              timestamp: new Date().toISOString(),
+              ilosc_klikniec_ogolem: iloscKlikniecOgolem,
+              ilosc_poprawnych_trafien: poprawneTrafienia,
+              ilosc_blednych_trafien: bledneTrafienia,
+              score: `Kliknięć: ${iloscKlikniecOgolem} | Poprawne: ${poprawneTrafienia} | Błędne: ${bledneTrafienia} | Skuteczność: ${accuracy}%`,
+              statystyki: {
+                  poprawne: poprawneTrafienia,
+                  bledne: bledneTrafienia,
+                  wszystkie_kliki: iloscKlikniecOgolem,
+                  proby: allData.length,
+                  skutecznosc_proc: accuracy
+              },
+              wyniki: allData
+          });
+      } else {
+          window.electronTest.close();
       }
-  
-      // Obliczenia (RT w ms)
-      let avgRT = validTrialsCount > 0 ? Math.round((totalRT / validTrialsCount) * 1000) : 0;
-      let accuracy = totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0;
-  
-      // Budujemy paczkę dla Launchera
-      let payload = {
-          testId: expInfo['expName'] || "Semafor",
-          subjectId: expInfo['participant'],
-          timestamp: new Date().toISOString(),
-          
-          // Główny wynik (do nagłówka modala)
-          czas_reakcji: avgRT, 
-          
-          // Tekst podsumowujący
-          score: `Śr. czas: ${avgRT} ms | Poprawne: ${correctCount}/${totalTrials} (${accuracy}%)`,
-          
-          // Statystyki szczegółowe (przydatne do analizy koordynacji)
-          statystyki: {
-              sredni_czas_ms: avgRT,
-              poprawne_klikniecia: correctCount,
-              wszystkie_proby: totalTrials,
-              skutecznosc_proc: accuracy
-          },
-          
-          // Pełne dane (tutaj będą też współrzędne kliknięć: clicked_x, target_x itd.)
-          wyniki: allData
-      };
-  
-      console.log("Wysyłanie danych do Launchera...", payload);
-      
-      // Wysyłamy i zamykamy
-      window.electronTest.sendResults(payload);
-  
-  } else {
-      console.log("Tryb przeglądarki - standardowy zapis CSV.");
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});
-  
   return Scheduler.Event.QUIT;
 }

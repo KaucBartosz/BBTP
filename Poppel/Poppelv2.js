@@ -1,4 +1,4 @@
-﻿/***************** 
+/***************** 
  * Poppelv2 *
  *****************/
 
@@ -260,8 +260,9 @@ function trialsRoutineBegin(snapshot) {
     }
     window.mouse.mouseClock.reset();
     
-    // 2. INICJALIZACJA ZEGARA PRÓBY (NAPRAWA BŁĘDU)
-    window.trialClock = new util.Clock(); 
+    // 2. INICJALIZACJA ZEGARA PRÓBY I KLATKI
+    window.trialClock = new util.Clock();
+    window.frameClock = new util.Clock();
     
     // 3. Reset liczników
     window.total_presses = 0;
@@ -390,9 +391,9 @@ function trialsRoutineEachFrame() {
     // update/draw components on each frame
     // --- HANDLE CLICKS ---
     let dt = 1.0 / 60.0;
-    if (typeof frameClock !== 'undefined') {
-        dt = frameClock.getTime();
-        frameClock.reset();
+    if (typeof window.frameClock !== 'undefined') {
+        dt = window.frameClock.getTime();
+        window.frameClock.reset();
     }
     
     // Czas od początku próby
@@ -581,32 +582,24 @@ function trialsRoutineEnd(snapshot) {
     psychoJS.experiment.addData('Correct_Clicks', window.target_presses);
     psychoJS.experiment.addData('Target_Appearances', window.target_appearances);
     
-    // zapis clicków
+    // zapis clicków (x, y z rekordu – nie click_x/click_y)
     for (let idx = 0; idx < window.clicked_records.length; idx++) {
       let rec = window.clicked_records[idx];
       psychoJS.experiment.addData('click_' + idx + '_time', rec.time !== undefined ? rec.time : -1);
       psychoJS.experiment.addData('click_' + idx + '_rt', rec.rt !== undefined ? rec.rt : -1);
       psychoJS.experiment.addData('click_' + idx + '_image', rec.stim_image !== undefined ? rec.stim_image : 'none');
       psychoJS.experiment.addData('click_' + idx + '_is_correct', rec.is_correct !== undefined ? rec.is_correct : 0);
-      psychoJS.experiment.addData('click_' + idx + '_x', rec.click_x !== undefined ? rec.click_x : null);
-      psychoJS.experiment.addData('click_' + idx + '_y', rec.click_y !== undefined ? rec.click_y : null);
+      psychoJS.experiment.addData('click_' + idx + '_x', rec.x !== undefined ? rec.x : null);
+      psychoJS.experiment.addData('click_' + idx + '_y', rec.y !== undefined ? rec.y : null);
     }
     
-    // store mouse trace
+    // store mouse trace (window.mouse === mouse)
     psychoJS.experiment.addData('mouse.x', window.mouse.x);
     psychoJS.experiment.addData('mouse.y', window.mouse.y);
     psychoJS.experiment.addData('mouse.leftButton', window.mouse.leftButton);
     psychoJS.experiment.addData('mouse.midButton', window.mouse.midButton);
     psychoJS.experiment.addData('mouse.rightButton', window.mouse.rightButton);
     psychoJS.experiment.addData('mouse.time', window.mouse.time);
-    
-    // store data for psychoJS.experiment (ExperimentHandler)
-    psychoJS.experiment.addData('mouse.x', mouse.x);
-    psychoJS.experiment.addData('mouse.y', mouse.y);
-    psychoJS.experiment.addData('mouse.leftButton', mouse.leftButton);
-    psychoJS.experiment.addData('mouse.midButton', mouse.midButton);
-    psychoJS.experiment.addData('mouse.rightButton', mouse.rightButton);
-    psychoJS.experiment.addData('mouse.time', mouse.time);
     
     // the Routine "trials" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
@@ -633,55 +626,48 @@ async function quitPsychoJS(message, isCompleted) {
   if (psychoJS.experiment.isEntryEmpty()) {
     psychoJS.experiment.nextEntry();
   }
-  // --- NOUS INTEGRATION: SEND DATA ---
   if (typeof window.electronTest !== 'undefined') {
-      
-      let standardData = psychoJS.experiment._trialsData;
-      let customData = window.clicked_records || [];
-  
-      let correctCount = window.target_presses || 0;
-      let totalClicks = window.total_presses || 0;
-      let appearances = window.target_appearances || 0;
-      
-      // Obliczamy skuteczność (Celność trafień)
-      let accuracy = totalClicks > 0 ? Math.round((correctCount / totalClicks) * 100) : 0;
-      
-      // Opcjonalnie: Skuteczność wykrywania (ile celów wyłapał spośród wszystkich, które przeleciały)
-      let detectionRate = appearances > 0 ? Math.round((correctCount / appearances) * 100) : 0;
-  
-      let payload = {
-          testId: expInfo['expName'] || "Poppelv2",
-          subjectId: expInfo['participant'],
-          timestamp: new Date().toISOString(),
-          
-          // GŁÓWNY WYNIK: Ustawiamy 0 lub Skuteczność, bo RT nie jest mierzone
-          // W platformie Nous pole to często jest wymagane jako "liczba" do sortowania.
-          czas_reakcji: accuracy, // Tutaj wysyłamy % skuteczności jako główny "score" liczbowy
-          
-          // OPIS DLA UŻYTKOWNIKA
-          score: `Trafienia: ${correctCount} | Skuteczność: ${accuracy}%`,
-          
-          statystyki: {
-              poprawne: correctCount,
-              bledy: totalClicks - correctCount,
-              wszystkie_kliki: totalClicks,
-              wszystkie_cele_na_ekranie: appearances,
-              skutecznosc_klikniec: accuracy,       // % dobrych kliknięć
-              skutecznosc_wykrywania: detectionRate // % wyłapanych celów
-          },
-          
-          wyniki: standardData,
-          wyniki_szczegolowe: customData
-      };
-  
-      console.log("Wysyłanie do Nous...", payload);
-      window.electronTest.sendResults(payload);
-  
-  } else {
-      console.log("Tryb przeglądarki - standardowy zapis CSV.");
+      if (isCompleted) {
+          let standardData = psychoJS.experiment._trialsData || [];
+          let customData = window.clicked_records || [];
+
+          let poprawneTrafienia = window.target_presses || 0;
+          let wszystkieKliki = window.total_presses || 0;
+          let obiektyDoKlikniecia = window.target_appearances || 0;
+          let bledneTrafienia = Math.max(0, wszystkieKliki - poprawneTrafienia);
+
+          let accuracy = wszystkieKliki > 0 ? Math.round((poprawneTrafienia / wszystkieKliki) * 100) : 0;
+          let detectionRate = obiektyDoKlikniecia > 0 ? Math.round((poprawneTrafienia / obiektyDoKlikniecia) * 100) : 0;
+
+          window.electronTest.sendResults({
+              testId: expInfo['expName'] || 'Poppelv2',
+              subjectId: expInfo['participant'],
+              timestamp: new Date().toISOString(),
+
+              ilosc_poprawnych_trafien: poprawneTrafienia,
+              ilosc_blednych_trafien: bledneTrafienia,
+              ilosc_obiektow_do_klikniecia: obiektyDoKlikniecia,
+
+              score: `Poprawne: ${poprawneTrafienia} | Błędne: ${bledneTrafienia} | Obiektów do kliknięcia: ${obiektyDoKlikniecia} | Skuteczność: ${accuracy}%`,
+
+              statystyki: {
+                  poprawne: poprawneTrafienia,
+                  bledne: bledneTrafienia,
+                  wszystkie_kliki: wszystkieKliki,
+                  obiekty_do_klikniecia: obiektyDoKlikniecia,
+                  skutecznosc_klikniec: accuracy,
+                  skutecznosc_wykrywania: detectionRate
+              },
+
+              wyniki: standardData,
+              wyniki_szczegolowe: customData
+          });
+      } else {
+          window.electronTest.close();
+      }
   }
   psychoJS.window.close();
   psychoJS.quit({message: message, isCompleted: isCompleted});
-  
+
   return Scheduler.Event.QUIT;
 }
