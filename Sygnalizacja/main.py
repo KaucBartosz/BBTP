@@ -17,10 +17,9 @@ NOUS_TRAINING = os.environ.get('NOUS_TRAINING') == '1'
 SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
-N_TRIALS = 10 if not NOUS_TRAINING else 5
+N_TRIALS = 50 if not NOUS_TRAINING else 25
 GREEN_ONSET = 1.0
 TRIAL_TIMEOUT = 3.0
-FEEDBACK_DURATION = 1.0
 
 
 def _write_results(script_dir, trials_data, poprawne, bledne, wszystkie, avg_rt_ms, score_text=''):
@@ -55,8 +54,8 @@ def main():
 
     instr = visual.TextStim(
         win,
-        text='Witaj!\n\nW tym teście klikaj w auto, które ma zielone światło.\n'
-             'Masz 3 sekundy na reakcję.\n\nWyboru dokonujesz myszką lub klawiszami A (lewe) / D (prawe).\n\nNaciśnij SPACJĘ, aby rozpocząć.',
+        text='Witaj!\n\nW tym teście wybierz auto, które ma zielone światło.\n'
+             'Masz 3 sekundy na reakcję.\n\nWyboru dokonujesz klawiszami A / ← (lewe auto) lub D / → (prawe auto).\n\nNaciśnij SPACJĘ, aby rozpocząć.',
         color='white', height=0.05, wrapWidth=1.8, alignText='center',
     )
     instr.draw()
@@ -73,9 +72,6 @@ def main():
     right_signal = visual.ImageStim(win, image=str(syg_czer), size=(0.15, 0.25), pos=(0.6, 0.2))
     left_car = visual.ImageStim(win, image=str(sam), size=(0.2, 0.2), pos=(-0.3, 0))
     right_car = visual.ImageStim(win, image=str(sam), size=(0.2, 0.2), pos=(0.3, 0))
-    mouse = event.Mouse(win=win)
-    mouse.setVisible(True)
-    feedback_text = visual.TextStim(win, text='', color='white', height=0.05, alignText='center')
 
     trials_data = []
     escaped = False
@@ -110,16 +106,9 @@ def main():
                 break
 
             if clicked_side is None:
-                # Mysz
-                if mouse.isPressedIn(left_car):
-                    clicked_side = 'left' if t >= GREEN_ONSET else 'early'
-                    rt_sec = (t - GREEN_ONSET) if t >= GREEN_ONSET else 0
-                elif mouse.isPressedIn(right_car):
-                    clicked_side = 'right' if t >= GREEN_ONSET else 'early'
-                    rt_sec = (t - GREEN_ONSET) if t >= GREEN_ONSET else 0
                 # Klawiatura
                 keys = event.getKeys(keyList=['left', 'right', 'a', 'd'])
-                if keys and clicked_side is None:
+                if keys:
                     k = keys[0]
                     if k in ('left', 'a'):
                         clicked_side = 'left' if t >= GREEN_ONSET else 'early'
@@ -148,20 +137,6 @@ def main():
             'rt': rt_sec,
             'outcome': outcome,
         })
-
-        # Feedback
-        if outcome == 'correct':
-            feedback_text.setText('DOBRZE')
-            feedback_text.setColor('green')
-        elif outcome == 'incorrect':
-            feedback_text.setText('ŹLE')
-            feedback_text.setColor('red')
-        else:
-            feedback_text.setText('ZA WOLNO')
-            feedback_text.setColor('yellow')
-        feedback_text.draw()
-        win.flip()
-        core.wait(FEEDBACK_DURATION)
 
     win.close()
 

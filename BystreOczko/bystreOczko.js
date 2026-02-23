@@ -18,7 +18,7 @@ let expInfo = {
     'session': '001',
 };
 let PILOTING = util.getUrlParameters().has('__pilotToken');
-const TRIAL_TIMEOUT_SEC = 10.0;  // limit czasu na próbę; przy minięciu dodawany do średniego RT
+const REACTION_TIME_LIMIT_SEC = 3.0;  // limit czasu na reakcję po zapaleniu zielonego (sekundy)
 
 // Start code blocks for 'Before Experiment'
 // init psychoJS:
@@ -467,7 +467,7 @@ function trialRoutineBegin(snapshot) {
     }
     
     // Losowanie momentu zapalenia i pozycji celu
-    window.greenOnset = 1.0 + Math.random() * 3.0; 
+    window.greenOnset = 1.0 + Math.random() * 1.0; // 1-2 sekundy
     window.target_row = Math.floor(Math.random() * window.ROWS);
     window.target_col = Math.floor(Math.random() * window.COLS);
     
@@ -534,6 +534,20 @@ function trialRoutineEachFrame() {
       return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
     }
 
+    // Timeout - brak reakcji w ciągu 3 sekund
+    if (window.green_is_on && !window.responded && window.rtClock.getTime() >= REACTION_TIME_LIMIT_SEC) {
+        window.responded = true;
+        window.rt = REACTION_TIME_LIMIT_SEC;  // czas reakcji = limit
+        window.correct = 0;
+        // Feedback wizualny - wszystkie zgaszone
+        for (let rr = 0; rr < window.ROWS; rr++) {
+            for (let cc = 0; cc < window.COLS; cc++) {
+                window.lights[rr][cc].setImage('resources/syg.png');
+            }
+        }
+        window.feedbackClock.reset();
+    }
+
     if (window.green_is_on && !window.responded && isNewClick) {
         for (let r = 0; r < window.ROWS; r++) {
             for (let c = 0; c < window.COLS; c++) {
@@ -543,11 +557,10 @@ function trialRoutineEachFrame() {
                     window.clicked_col = c;
                     window.rt = window.rtClock.getTime();
                     window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-                    // Feedback wizualny
-                    let feedbackImg = (window.correct === 1) ? 'resources/sygZiel.png' : 'resources/syg.png';
+                    // Feedback wizualny - wszystkie zgaszone niezależnie od wyniku
                     for (let rr = 0; rr < window.ROWS; rr++) {
                         for (let cc = 0; cc < window.COLS; cc++) {
-                            window.lights[rr][cc].setImage(feedbackImg);
+                            window.lights[rr][cc].setImage('resources/syg.png');
                         }
                     }
                     window.feedbackClock.reset();
@@ -567,10 +580,10 @@ function trialRoutineEachFrame() {
                     window.clicked_col = c;
                     window.rt = window.rtClock.getTime();
                     window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-                    let feedbackImg = (window.correct === 1) ? 'resources/sygZiel.png' : 'resources/syg.png';
+                    // Feedback wizualny - wszystkie zgaszone niezależnie od wyniku
                     for (let rr = 0; rr < window.ROWS; rr++) {
                         for (let cc = 0; cc < window.COLS; cc++) {
-                            window.lights[rr][cc].setImage(feedbackImg);
+                            window.lights[rr][cc].setImage('resources/syg.png');
                         }
                     }
                     window.feedbackClock.reset();
@@ -588,12 +601,8 @@ function trialRoutineEachFrame() {
         window._touchPsychoY = null;
     }
     
-    // 4. Koniec próby (po feedbacku lub po timeout)
+    // 4. Koniec próby (po feedbacku)
     if (window.responded && window.feedbackClock.getTime() >= window.feedbackTime) {
-        continueRoutine = false;
-    }
-    
-    if (currentTime >= TRIAL_TIMEOUT_SEC) {
         continueRoutine = false;
     }
     // *mouse* updates
@@ -700,7 +709,8 @@ async function quitPsychoJS(message, isCompleted) {
           let allData = (psychoJS.experiment._trialsData || []).filter(function (t) { return typeof t.correct !== 'undefined'; });
           let correctCount = 0;   // naciśnięcie na zielone
           let wrongCount = 0;     // naciśnięcie na czerwone
-          let sumRT = 0;          // suma czasów reakcji (s); przy timeout +TRIAL_TIMEOUT_SEC
+          let noResponseCount = 0; // brak naciśnięcia (timeout)
+          let sumRT = 0;          // suma czasów reakcji (s)
 
           for (let trial of allData) {
               if (trial.correct === 1) {
@@ -708,7 +718,11 @@ async function quitPsychoJS(message, isCompleted) {
               } else if (typeof trial.rt === 'number' && trial.rt >= 0) {
                   wrongCount++;
               }
-              let rtSec = (typeof trial.rt === 'number' && trial.rt >= 0) ? trial.rt : TRIAL_TIMEOUT_SEC;
+              // Sprawdź czy to był timeout (rt == REACTION_TIME_LIMIT_SEC i brak kliknięcia)
+              if (trial.rt === REACTION_TIME_LIMIT_SEC && trial.clicked_row === undefined) {
+                  noResponseCount++;
+              }
+              let rtSec = (typeof trial.rt === 'number' && trial.rt >= 0) ? trial.rt : REACTION_TIME_LIMIT_SEC;
               sumRT += rtSec;
           }
 
@@ -722,10 +736,11 @@ async function quitPsychoJS(message, isCompleted) {
               timestamp: new Date().toISOString(),
               ilosc_poprawnych_nacisniec: correctCount,
               ilosc_blednych_nacisniec: wrongCount,
+              ilosc_brakow_nacisniec: noResponseCount,
               ogolna_ilosc_nacisniec: totalClicks,
               sredni_czas_reakcji: avgRTms,
               czas_reakcji: avgRTms,
-              score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Łącznie: ${totalClicks} | Śr. RT: ${avgRTms} ms`,
+              score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Braki: ${noResponseCount} | Śr. RT: ${avgRTms} ms`,
               wyniki: allData
           });
       } else {

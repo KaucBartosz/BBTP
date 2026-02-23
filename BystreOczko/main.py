@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
 ROWS, COLS = 3, 6
-TRIAL_TIMEOUT_SEC = 10.0
+REACTION_TIME_LIMIT_SEC = 3.0  # limit czasu na reakcję po zapaleniu zielonego (sekundy)
 FEEDBACK_TIME = 0.5
 N_TRIALS = 5 if NOUS_TRAINING else 10
 
@@ -31,7 +31,7 @@ INSTRUCTION = (
 )
 
 
-def _write_results(script_dir, trials_data, correct_count, wrong_count, total_clicks, avg_rt_ms):
+def _write_results(script_dir, trials_data, correct_count, wrong_count, no_response_count, total_clicks, avg_rt_ms):
     n_trials = len(trials_data)
     results = {
         'testId': 'bystreOczko',
@@ -39,10 +39,11 @@ def _write_results(script_dir, trials_data, correct_count, wrong_count, total_cl
         'timestamp': datetime.utcnow().isoformat() + 'Z',
         'ilosc_poprawnych_nacisniec': correct_count,
         'ilosc_blednych_nacisniec': wrong_count,
+        'ilosc_brakow_nacisniec': no_response_count,
         'ogolna_ilosc_nacisniec': total_clicks,
         'sredni_czas_reakcji': avg_rt_ms,
         'czas_reakcji': avg_rt_ms,
-        'score': f'Poprawne: {correct_count} | Błędne: {wrong_count} | Łącznie: {total_clicks} | Śr. RT: {avg_rt_ms} ms',
+        'score': f'Poprawne: {correct_count} | Błędne: {wrong_count} | Braki: {no_response_count} | Śr. RT: {avg_rt_ms} ms',
         'wyniki': trials_data,
     }
     out_path = script_dir / 'results.json'
@@ -74,7 +75,7 @@ def main():
     if keyname == 'escape':
         win.close()
         if NOUS_LAUNCHER:
-            _write_results(SCRIPT_DIR, [], 0, 0, 0, 0)
+            _write_results(SCRIPT_DIR, [], 0, 0, 0, 0, 0)
         return
 
     # Siatka sygnalizatorów (współrzędne jak w JS)
@@ -110,7 +111,7 @@ def main():
                 lights[r][c].setImage(str(RESOURCES / 'sygCzer.png'))
                 lights[r][c].draw()
 
-        green_onset = 1.0 + random.random() * 3.0
+        green_onset = 1.0 + random.random() * 1.0  # 1-2 sekundy
         target_row = random.randint(0, ROWS - 1)
         target_col = random.randint(0, COLS - 1)
 
@@ -124,7 +125,10 @@ def main():
         trial_clock.reset()
         rt_clock.reset()
 
-        while trial_clock.getTime() < TRIAL_TIMEOUT_SEC:
+        # Maksymalny czas próby: green_onset (max 2s) + REACTION_TIME_LIMIT_SEC (3s) + margin
+        max_trial_time = green_onset + REACTION_TIME_LIMIT_SEC + 1.0
+
+        while trial_clock.getTime() < max_trial_time:
             t = trial_clock.getTime()
 
             if event.getKeys(keyList=['escape']):
@@ -142,6 +146,22 @@ def main():
                 for c in range(COLS):
                     lights[r][c].draw()
 
+            # Timeout - brak reakcji w ciągu 3 sekund
+            if green_on and not responded and rt_clock.getTime() >= REACTION_TIME_LIMIT_SEC:
+                responded = True
+                rt = REACTION_TIME_LIMIT_SEC  # czas reakcji = limit
+                correct = 0
+                # Feedback wizualny - wszystkie zgaszone
+                for rr in range(ROWS):
+                    for cc in range(COLS):
+                        lights[rr][cc].setImage(str(RESOURCES / 'syg.png'))
+                # Narysuj i wyświetl feedback natychmiast
+                for rr in range(ROWS):
+                    for cc in range(COLS):
+                        lights[rr][cc].draw()
+                win.flip()
+                break
+
             # Kliknięcie myszy
             pressed = mouse.getPressed()
             is_new_click = (pressed[0] or pressed[1] or pressed[2]) and not (prev_pressed[0] or prev_pressed[1] or prev_pressed[2])
@@ -155,10 +175,15 @@ def main():
                             responded = True
                             rt = rt_clock.getTime()
                             correct = 1 if (r == target_row and c == target_col) else 0
-                            feedback_img = RESOURCES / 'sygZiel.png' if correct == 1 else RESOURCES / 'syg.png'
+                            # Feedback wizualny - wszystkie zgaszone niezależnie od wyniku
                             for rr in range(ROWS):
                                 for cc in range(COLS):
-                                    lights[rr][cc].setImage(str(feedback_img))
+                                    lights[rr][cc].setImage(str(RESOURCES / 'syg.png'))
+                            # Narysuj i wyświetl feedback natychmiast
+                            for rr in range(ROWS):
+                                for cc in range(COLS):
+                                    lights[rr][cc].draw()
+                            win.flip()
                             break
                     if responded:
                         break
@@ -191,16 +216,17 @@ def main():
     # Podsumowanie wyników (zgodne z wersją JS)
     correct_count = sum(1 for t in trials_data if t['correct'] == 1)
     wrong_count = sum(1 for t in trials_data if t['rt'] is not None and t['correct'] == 0)
+    no_response_count = sum(1 for t in trials_data if t['rt'] == REACTION_TIME_LIMIT_SEC and 'clicked_row' not in t)
     total_clicks = correct_count + wrong_count
     n_trials = len(trials_data)
     sum_rt = sum(
-        t['rt'] if t['rt'] is not None and t['rt'] >= 0 else TRIAL_TIMEOUT_SEC
+        t['rt'] if t['rt'] is not None and t['rt'] >= 0 else REACTION_TIME_LIMIT_SEC
         for t in trials_data
     )
     avg_rt_ms = round((sum_rt / n_trials) * 1000) if n_trials else 0
 
     if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, trials_data, correct_count, wrong_count, total_clicks, avg_rt_ms)
+        _write_results(SCRIPT_DIR, trials_data, correct_count, wrong_count, no_response_count, total_clicks, avg_rt_ms)
 
 
 if __name__ == '__main__':
