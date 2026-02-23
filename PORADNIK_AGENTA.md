@@ -383,6 +383,7 @@ NazwaTestu/
 4. Zapis `results.json` tylko gdy `NOUS_LAUNCHER == True`
 5. ESC na instrukcji: zapis pustych wyników
 6. ESC w próbach: flaga `escaped`, przerwanie zewnętrznej pętli
+7. Jeśli uznasz za potrzebne możesz skorzystać z narzędzi z bibliotek: "PsychoPy, NumPy, SciPy, Pandas, Pyglet, wxPython"
 
 ---
 
