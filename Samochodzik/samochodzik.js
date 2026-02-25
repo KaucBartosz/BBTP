@@ -6,12 +6,9 @@ import { core, visual, util, data, sound, hardware } from './lib/psychojs-2025.1
 const { PsychoJS } = core;
 const { Scheduler } = util;
 
-// 1. Inicjalizacja PsychoJS
-const psychoJS = new PsychoJS({
-    debug: false
-});
+// 1. Inicjalizacja
+const psychoJS = new PsychoJS({ debug: false });
 
-// Otwarcie okna
 psychoJS.openWindow({
     fullscr: false,
     color: new util.Color([0, 0, 0]),
@@ -19,66 +16,55 @@ psychoJS.openWindow({
     waitBlanking: true
 });
 
-// Harmonogramy
 const flowScheduler = new Scheduler(psychoJS);
 const dialogCancelScheduler = new Scheduler(psychoJS);
 
-// --- KONFIGURACJA ---
-let expName = 'samochodzik';
-let expInfo = { 'participant': 'test' };
-
 // --- STAN GRY ---
-let trackImage, carSprite, welcomeText;
-let carX = -0.336, carY = -0.322, carRotation = 0;
+let expName = 'samochodzik';
+let expInfo = { 'participant': 'test', 'difficulty': '1' };
+
+let trackImage, carSprite, welcomeText, difficultyText;
+let carX, carY, carRotation = 0, freezeTimer = 0;
+let startX_saved, startY_saved;
 let collisionCount = 0, startTime = null, finished = false;
 let trackPixels = null;
-let trackImgElement = null;
-let carImgElement = null;
-const activeKeys = new Set();
+let trackPixelsW, trackPixelsH;
+let currentAspect = 0.555;
+let selectedTrackPath = 'resources/trasa.png';
 
-// Obsługa klawiszy
-document.addEventListener('keydown', (e) => activeKeys.add(e.key));
+const activeKeys = new Set();
+let lastSelectionKey = null;
+
+document.addEventListener('keydown', (e) => {
+    activeKeys.add(e.key);
+    lastSelectionKey = e.key;
+});
 document.addEventListener('keyup', (e) => activeKeys.delete(e.key));
 
-// --- RUTYNY ---
-
+/**
+ * Inicjalizacja
+ */
 async function experimentInit() {
-    const loadImg = (src) => new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-    });
-
-    try {
-        trackImgElement = await loadImg('resources/trasa.png');
-        carImgElement = await loadImg('resources/sam.png');
-
-        const cv = document.createElement('canvas');
-        cv.width = 800; cv.height = 444;
-        const ctx = cv.getContext('2d');
-        ctx.drawImage(trackImgElement, 0, 0, 800, 444);
-        trackPixels = ctx.getImageData(0, 0, 800, 444).data;
-    } catch (e) {
-        console.error("Błąd ładowania obrazów:", e);
-    }
-
-    trackImage = new visual.ImageStim({
-        win: psychoJS.window, name: 'track',
-        image: trackImgElement, pos: [0, 0], size: [1.6, 1.6 * 0.555]
-    });
-
-    carSprite = new visual.ImageStim({
-        win: psychoJS.window, name: 'car',
-        image: carImgElement, pos: [carX, carY], size: [0.03, 0.05]
-    });
-
     welcomeText = new visual.TextStim({
-        win: psychoJS.window, text: "SAMOCHODZIK\n\nNaciśnij SPACJĘ aby rozpocząć",
+        win: psychoJS.window,
+        text: "SAMOCHODZIK\n\nCEL: Dojedź do czerwonego pola mety.\nSTEROWANIE: Strzałki klawiatury.\n\nNaciśnij SPACJĘ, aby wybrać trasę",
+        color: new util.Color('white'), height: 0.04
+    });
+
+    difficultyText = new visual.TextStim({
+        win: psychoJS.window, text: "WYBIERZ TRASĘ:\n\n1 - Klasyczna (Łatwa)\n2 - Labirynt (Trudna)\n\nNaciśnij 1 lub 2",
         color: new util.Color('white'), height: 0.05
     });
 
-    // Zablokowanie standardowego zapisu PsychoJS CSV (wymagane przez Nous)
+    const carImg = new Image();
+    carImg.src = 'resources/sam.png';
+    await new Promise((resolve) => carImg.onload = resolve);
+
+    carSprite = new visual.ImageStim({
+        win: psychoJS.window, name: 'car',
+        image: carImg, pos: [0, 0], size: [0.03, 0.05], depth: -10
+    });
+
     if (typeof window.electronTest !== 'undefined') {
         psychoJS.experiment.save = () => Promise.resolve();
     }
@@ -88,77 +74,173 @@ async function experimentInit() {
 function welcomeRoutine() {
     return async function () {
         if (welcomeText.status === PsychoJS.Status.NOT_STARTED) {
-            welcomeText.status = PsychoJS.Status.STARTED;
             welcomeText.setAutoDraw(true);
+            welcomeText.status = PsychoJS.Status.STARTED;
+            lastSelectionKey = null;
         }
-
-        if (activeKeys.has(' ') || activeKeys.has('Spacebar')) {
+        if (activeKeys.has(' ') || activeKeys.has('Spacebar') || lastSelectionKey === ' ') {
             welcomeText.setAutoDraw(false);
-            startTime = Date.now();
+            lastSelectionKey = null;
             return Scheduler.Event.NEXT;
         }
-
-        // ESC na ekranie powitalnym = wyjście bez zapisu
-        if (activeKeys.has('Escape') || activeKeys.has('escape')) {
-            return quitPsychoJS('Wyjście', false);
-        }
-
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', false);
         return Scheduler.Event.FLIP_REPEAT;
     };
 }
 
-function gameRoutine() {
+function difficultyRoutine() {
     return async function () {
-        if (trackImage.status === PsychoJS.Status.NOT_STARTED) {
-            trackImage.setAutoDraw(true);
-            carSprite.setAutoDraw(true);
-            trackImage.status = PsychoJS.Status.STARTED;
+        if (difficultyText.status === PsychoJS.Status.NOT_STARTED) {
+            difficultyText.setAutoDraw(true);
+            difficultyText.status = PsychoJS.Status.STARTED;
+            lastSelectionKey = null;
         }
 
-        if (finished) {
-            trackImage.setAutoDraw(false);
-            carSprite.setAutoDraw(false);
+        let choice = null;
+        if (lastSelectionKey === '1' || lastSelectionKey === 'Numpad1') choice = '1';
+        if (lastSelectionKey === '2' || lastSelectionKey === 'Numpad2') choice = '2';
+
+        if (choice) {
+            expInfo['difficulty'] = choice;
+            selectedTrackPath = choice === '1' ? 'resources/trasa.png' : 'resources/trasa2.png';
+            difficultyText.setAutoDraw(false);
+            lastSelectionKey = null;
+
+            await loadTrackResources(selectedTrackPath);
             return Scheduler.Event.NEXT;
         }
 
-        // ESC w trakcie gry = wyjście bez zapisu
-        if (activeKeys.has('Escape') || activeKeys.has('escape')) {
-            return quitPsychoJS('Przerwano', false);
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Wyjście', false);
+        return Scheduler.Event.FLIP_REPEAT;
+    };
+}
+
+/**
+ * Optymalizacja Krytyczna: Skalowanie gigantycznych grafik do rozmiaru bezpiecznego dla GPU/CPU
+ */
+async function loadTrackResources(path) {
+    const img = new Image();
+    img.src = path;
+    await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+    });
+
+    // Przeskalowanie grafiki (np. z 6000px do 1600px) aby nie zawiesić GPU
+    const maxW = 1600;
+    const scale = Math.min(1.0, maxW / img.width);
+    trackPixelsW = Math.round(img.width * scale);
+    trackPixelsH = Math.round(img.height * scale);
+    currentAspect = img.height / img.width;
+
+    const cv = document.createElement('canvas');
+    cv.width = trackPixelsW; cv.height = trackPixelsH;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, trackPixelsW, trackPixelsH);
+
+    // Pobieranie danych z mniejszego bufora (ImageData)
+    trackPixels = ctx.getImageData(0, 0, trackPixelsW, trackPixelsH).data;
+
+    // Skanowanie celu (start)
+    let sumX = 0, sumY = 0, count = 0;
+    for (let i = 0; i < trackPixels.length; i += 4) {
+        if (trackPixels[i] < 75 && trackPixels[i + 1] > 180 && trackPixels[i + 2] < 75) {
+            const idx = i / 4;
+            sumX += idx % trackPixelsW;
+            sumY += Math.floor(idx / trackPixelsW);
+            count++;
+        }
+    }
+
+    let startPX = trackPixelsW * 0.3, startPY = trackPixelsH * 0.8;
+    if (count > 0) {
+        startPX = sumX / count;
+        startPY = sumY / count;
+    }
+
+    startX_saved = (startPX / trackPixelsW - 0.5) * 1.6;
+    startY_saved = (currentAspect / 2 - startPY / trackPixelsW) * 1.6;
+
+    carX = startX_saved;
+    carY = startY_saved;
+
+    // Ważne: PsychoJS nie przyjmuje surowego Canvas, musimy zamienić go na obraz (DataURL)
+    const finalImg = new Image();
+    finalImg.src = cv.toDataURL("image/png");
+    await new Promise(r => finalImg.onload = r);
+
+    trackImage = new visual.ImageStim({
+        win: psychoJS.window, name: 'track',
+        image: finalImg, pos: [0, 0], size: [1.6, 1.6 * currentAspect], depth: 10
+    });
+
+    startTime = Date.now();
+    finished = false;
+}
+
+function gameRoutine() {
+    return async function () {
+        if (!trackImage || trackImage.status === PsychoJS.Status.NOT_STARTED) {
+            if (trackImage) {
+                trackImage.setAutoDraw(true);
+                carSprite.setAutoDraw(true);
+                trackImage.status = PsychoJS.Status.STARTED;
+            }
         }
 
-        let dx = 0, dy = 0;
-        if (activeKeys.has('ArrowLeft')) dx -= 1;
-        if (activeKeys.has('ArrowRight')) dx += 1;
-        if (activeKeys.has('ArrowUp')) dy += 1;
-        if (activeKeys.has('ArrowDown')) dy -= 1;
-
-        if (dx !== 0 || dy !== 0) {
-            const len = Math.sqrt(dx * dx + dy * dy);
-            carX += (dx / len) * 0.007;
-            carY += (dy / len) * 0.007;
-            carRotation = Math.atan2(dx, dy);
+        if (finished) {
+            if (trackImage) trackImage.setAutoDraw(false);
+            if (carSprite) carSprite.setAutoDraw(false);
+            return Scheduler.Event.NEXT;
         }
 
-        // Kolizja
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) return quitPsychoJS('Przerwano', false);
+
+        // System mrożenia po kolizji
+        if (freezeTimer > 0) {
+            freezeTimer -= 1 / 60; // Zakładamy 60 klatek, PsychoJS sam to wygładzi
+            carSprite.setOpacity(0.5);
+        } else {
+            carSprite.setOpacity(1.0);
+            let dx = 0, dy = 0;
+            if (activeKeys.has('ArrowLeft')) dx -= 1;
+            if (activeKeys.has('ArrowRight')) dx += 1;
+            if (activeKeys.has('ArrowUp')) dy += 1;
+            if (activeKeys.has('ArrowDown')) dy -= 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.sqrt(dx * dx + dy * dy);
+                carX += (dx / len) * 0.007;
+                carY += (dy / len) * 0.007;
+                carRotation = Math.atan2(dx, dy);
+            }
+        }
+
+        // Kolizja na przeskalowanym buforze
         if (trackPixels) {
-            const px = Math.floor((carX / 1.6 + 0.5) * 800);
-            const py = Math.floor((0.2775 - carY / 1.6) * (444 / 0.555));
-            const idx = (Math.max(0, Math.min(443, py)) * 800 + Math.max(0, Math.min(799, px))) * 4;
+            const px = Math.floor((carX / 1.6 + 0.5) * trackPixelsW);
+            const py = Math.floor((currentAspect / 2 - carY / 1.6) * trackPixelsW);
+
+            const idx = (Math.max(0, Math.min(trackPixelsH - 1, py)) * trackPixelsW + Math.max(0, Math.min(trackPixelsW - 1, px))) * 4;
             const r = trackPixels[idx], g = trackPixels[idx + 1], b = trackPixels[idx + 2];
 
-            if (r > 200 && g < 100 && b < 100) { // Meta
+            if (r > 150 && g < 100 && b < 100) { // Meta
                 finished = true;
                 return Scheduler.Event.NEXT;
             }
-            if (r < 50 && g < 50 && b < 50) { // Ściana
-                carX = -0.336; carY = -0.322; carRotation = 0;
+            if (r < 80 && g < 80 && b < 80) { // Ściana
+                carX = startX_saved;
+                carY = startY_saved;
+                carRotation = 0;
                 collisionCount++;
+                freezeTimer = 0.5; // Zapobiegaj seryjnym kolizjom (0.5 sekundy)
             }
         }
 
-        carSprite.setPos([carX, carY]);
-        carSprite.setOri(carRotation * (180 / Math.PI));
-
+        if (carSprite) {
+            carSprite.setPos([carX, carY]);
+            carSprite.setOri(carRotation * (180 / Math.PI));
+        }
         return Scheduler.Event.FLIP_REPEAT;
     };
 }
@@ -171,7 +253,7 @@ function finishRoutine() {
         if (finishClock === null) {
             finishClock = new util.Clock();
             finishText = new visual.TextStim({
-                win: psychoJS.window, text: "META!\n\nZapisywanie punktów...",
+                win: psychoJS.window, text: "META!\n\nZamykanie...",
                 color: new util.Color('green'), height: 0.1
             });
             finishText.setAutoDraw(true);
@@ -181,54 +263,37 @@ function finishRoutine() {
             finishText.setAutoDraw(false);
             return quitPsychoJS('Koniec', true);
         }
-
         return Scheduler.Event.FLIP_REPEAT;
     };
 }
 
-/**
- * Zamykanie testu i wysyłka wyników zgodnie z PORADNIK_AGENTA.md
- */
 async function quitPsychoJS(message, isCompleted) {
     if (typeof window.electronTest !== 'undefined') {
         if (isCompleted) {
-            // Ujednolicone nazewnictwo wyników (Sekcja 2 i 3 Poradnika)
             window.electronTest.sendResults({
                 testId: 'samochodzik',
                 subjectId: expInfo['participant'],
                 timestamp: new Date().toISOString(),
-                ilosc_poprawnych_nacisniec: 1, // Dojechanie do mety to 1 poprawny przebieg
+                difficulty: expInfo['difficulty'],
+                ilosc_poprawnych_nacisniec: 1,
                 ilosc_blednych_nacisniec: collisionCount,
                 ogolna_ilosc_nacisniec: 1 + collisionCount,
                 czas_pokonania_trasy_sek: Math.round((Date.now() - startTime) / 1000),
-                // Nie dodajemy sredni_czas_reakcji, bo test go nie mierzy (Sekcja 2.52)
-                score: `Meta osiągnięta! Kolizje: ${collisionCount} | Czas: ${Math.round((Date.now() - startTime) / 1000)}s`,
-                statystyki: {
-                    czas_trwania_ms: Date.now() - startTime,
-                    liczba_kolizji: collisionCount
-                }
+                score: `Trasa ${expInfo['difficulty']} | Kolizje: ${collisionCount} | Czas: ${Math.round((Date.now() - startTime) / 1000)}s`,
+                statystyki: { trasa: expInfo['difficulty'], kolizje: collisionCount, czas_ms: Date.now() - startTime }
             });
-        } else {
-            // Wyjście przez ESC bez zapisu
-            window.electronTest.close();
-        }
+        } else { window.electronTest.close(); }
     }
-
     psychoJS.window.close();
     psychoJS.quit({ message: message, isCompleted: isCompleted });
     return Scheduler.Event.QUIT;
 }
 
-// --- FLOW ---
 psychoJS.scheduleCondition(function () { return true; }, flowScheduler, dialogCancelScheduler);
-
 flowScheduler.add(experimentInit);
 flowScheduler.add(welcomeRoutine());
+flowScheduler.add(difficultyRoutine());
 flowScheduler.add(gameRoutine());
 flowScheduler.add(finishRoutine());
 
-psychoJS.start({
-    expName: expName,
-    expInfo: expInfo,
-    resources: []
-});
+psychoJS.start({ expName: expName, expInfo: expInfo, resources: [] });

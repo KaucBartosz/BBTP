@@ -20,47 +20,39 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
 # Konfiguracja testu
-REACTION_TIME_LIMIT_SEC = 3.0
-FEEDBACK_TIME = 0.5
-N_TRIALS = 5 if NOUS_TRAINING else 10
-
-# Skalowanie mapy i auta
 MAP_SCALE = 1.6
 MAP_ASPECT = 0.555
 CAR_SIZE = (0.03, 0.05)
 
-# Współrzędne startowe (z analizy obrazu 800x444)
-# Zielone pole środek: x=232, y=383 (w pikselach)
-# Mapowanie na jednostki 'height' z uwzględnieniem MAP_SCALE:
-start_x = (232 / 800 - 0.5) * MAP_SCALE
-start_y = (0.2775 - 383 / 800) * MAP_SCALE
-START_AREA = (start_x, start_y)
-
 INSTRUCTION = (
     'TEST NAWIGACJI SAMOCHODZIKIEM\n\n'
-    'Sterowanie:\n'
-    'Strzałka w górę - jazda do przodu\n'
-    'Strzałka w dół - jazda do tyłu\n'
-    'Strzałka w lewo - skręt w lewo\n'
-    'Strzałka w prawo - skręt w prawo\n\n'
-    'Cel: poruszaj się po białej trasie\n'
-    'Jeśli wyjedziesz poza trasę - reset do pozycji startowej\n\n'
-    'Naciśnij SPACJĘ aby rozpocząć\n'
+    'CEL: Dojedź do czerwonego pola mety.\n'
+    'STEROWANIE: Strzałki klawiatury.\n\n'
+    'Naciśnij SPACJĘ aby wybrać trasę\n'
     'Naciśnij ESC aby wyjść'
 )
 
-def _write_results(script_dir, trials_data, collision_count, duration):
+DIFFICULTY_TXT = (
+    'WYBIERZ TRASĘ:\n\n'
+    '1 - Klasyczna (Łatwa)\n'
+    '2 - Labirynt (Trudna)\n\n'
+    'Naciśnij 1 lub 2'
+)
+
+def _write_results(script_dir, trials_data, collision_count, duration, difficulty):
     results = {
-        'testId': 'samochodzik', # małe litery jak w JS
+        'testId': 'samochodzik',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'ilosc_poprawnych_nacisniec': 1 if collision_count > 0 or duration > 0 else 0,
+        'difficulty': difficulty,
+        'ilosc_poprawnych_nacisniec': 1 if duration > 0 else 0,
         'ilosc_blednych_nacisniec': collision_count,
-        'ogolna_ilosc_nacisniec': (1 if collision_count > 0 or duration > 0 else 0) + collision_count,
+        'ogolna_ilosc_nacisniec': (1 if duration > 0 else 0) + collision_count,
         'czas_pokonania_trasy_sek': round(duration),
-        'score': f'Meta osiągnięta! Kolizje: {collision_count} | Czas: {round(duration)}s',
+        'score': f'Trasa {difficulty} | Kolizje: {collision_count} | Czas: {round(duration)}s',
         'statystyki': {
-            'liczba_kolizji': collision_count,
+            'trasa': difficulty,
+            'kolizje': collision_count,
             'czas_trwania_ms': round(duration * 1000)
         },
         'wyniki': trials_data,
@@ -69,171 +61,155 @@ def _write_results(script_dir, trials_data, collision_count, duration):
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
+def find_start_position(track_path):
+    """Automatyczne szukanie środka zielonego punktu startowego na obrazie"""
+    try:
+        img = Image.open(str(track_path)).convert('RGB')
+        pixels = img.load()
+        width, height = img.size
+        
+        green_x = []
+        green_y = []
+        for y in range(height):
+            for x in range(width):
+                r, g, b = pixels[x, y]
+                # Szukaj zielonego (0, 255, 0) z tolerancją
+                if r < 50 and g > 200 and b < 50:
+                    green_x.append(x)
+                    green_y.append(y)
+        
+        if green_x:
+            # Obliczamy średnią, aby trafić w środek pola
+            avg_x = sum(green_x) / len(green_x)
+            avg_y = sum(green_y) / len(green_y)
+            sx = (avg_x / width - 0.5) * MAP_SCALE
+            sy = (0.2775 - avg_y / width) * MAP_SCALE
+            return (sx, sy), img
+    except Exception as e:
+        print(f"Błąd analizy mapy: {e}")
+    return (-0.336, -0.322), None # Fallback
+
 def is_on_track(x, y, track_pixels):
-    """Sprawdzenie czy punkt jest na białej/zielonej/czerwonej trasie"""
-    # Mapowanie z powrotem na piksele obrazu 800x444
+    img_w, img_h = track_pixels.size
     rel_x = x / MAP_SCALE
     rel_y = y / MAP_SCALE
-    
-    pixel_x = int((rel_x + 0.5) * 800)
-    pixel_y = int((0.2775 - rel_y) * 800)
-
-    if pixel_x < 0 or pixel_x >= 800 or pixel_y < 0 or pixel_y >= 444:
-        return False
-
+    px = int((rel_x + 0.5) * img_w)
+    py = int((0.2775 - rel_y) * img_w)
+    if px < 0 or px >= img_w or py < 0 or py >= img_h: return False
     try:
-        pixel = track_pixels.getpixel((pixel_x, pixel_y))
-        if isinstance(pixel, int):
-            return pixel > 200
-        # Akceptujemy biały, zielony i czerwony
-        return any(c > 200 for c in pixel)
-    except Exception:
-        return False
+        pixel = track_pixels.getpixel((px, py))
+        if isinstance(pixel, int): return pixel > 50
+        return any(c > 50 for c in pixel)
+    except: return False
 
 def is_at_finish(x, y, track_pixels):
-    """Sprawdzenie czy punkt jest na czerwonym polu mety (R > 200)"""
+    img_w, img_h = track_pixels.size
     rel_x = x / MAP_SCALE
     rel_y = y / MAP_SCALE
-    pixel_x = int((rel_x + 0.5) * 800)
-    pixel_y = int((0.2775 - rel_y) * 800)
-
-    if pixel_x < 0 or pixel_x >= 800 or pixel_y < 0 or pixel_y >= 444:
-        return False
-
+    px = int((rel_x + 0.5) * img_w)
+    py = int((0.2775 - rel_y) * img_w)
+    if px < 0 or px >= img_w or py < 0 or py >= img_h: return False
     try:
-        pixel = track_pixels.getpixel((pixel_x, pixel_y))
-        if isinstance(pixel, int): return False
-        # Czerwony kolor mety
-        return pixel[0] > 200 and pixel[1] < 100 and pixel[2] < 100
-    except Exception:
-        return False
+        p = track_pixels.getpixel((px, py))
+        return p[0] > 150 and p[1] < 100 and p[2] < 100
+    except: return False
 
 def main():
-    win = visual.Window(
-        fullscr=True,
-        units='height',
-        color=(-1, -1, -1),
-        allowGUI=False
-    )
+    win = visual.Window(fullscr=True, units='height', color=(-1, -1, -1), allowGUI=False)
     mouse = event.Mouse(win=win)
     mouse.setVisible(True)
 
-    instr = visual.TextStim(
-        win, text=INSTRUCTION,
-        color='white', height=0.04,
-        wrapWidth=1.5, alignText='center',
-    )
+    # 1. Instrukcja
+    instr = visual.TextStim(win, text=INSTRUCTION, color='white', height=0.04)
     instr.draw()
     win.flip()
-    
-    keys = event.waitKeys(keyList=['space', 'return', 'escape'])
+    if 'escape' in event.waitKeys(keyList=['space', 'escape']):
+        win.close()
+        return
+
+    # 2. Wybór trasy
+    diff_stim = visual.TextStim(win, text=DIFFICULTY_TXT, color='white', height=0.04)
+    diff_stim.draw()
+    win.flip()
+    keys = event.waitKeys(keyList=['1', '2', 'escape'])
     if not keys or 'escape' in keys:
         win.close()
-        if NOUS_LAUNCHER:
-            _write_results(SCRIPT_DIR, [], 0, 0)
         return
+    
+    difficulty = keys[0]
+    track_path = RESOURCES / ('trasa.png' if difficulty == '1' else 'trasa2.png')
+    
+    # 3. Inicjalizacja trasy i samochodu
+    start_pos, track_pil = find_start_position(track_path)
+    
+    track_stim = visual.ImageStim(win, image=str(track_path), pos=[0, 0], size=[MAP_SCALE, MAP_SCALE * MAP_ASPECT])
+    car = visual.ImageStim(win, image=str(RESOURCES / 'sam.png'), pos=start_pos, size=CAR_SIZE)
 
-    track_image = visual.ImageStim(
-        win=win,
-        image=str(RESOURCES / 'trasa.png'),
-        pos=[0, 0],
-        size=[MAP_SCALE, MAP_SCALE * MAP_ASPECT],
-        opacity=1.0
-    )
-
-    car = visual.ImageStim(
-        win=win,
-        image=str(RESOURCES / 'sam.png'),
-        pos=[START_AREA[0], START_AREA[1]],
-        size=CAR_SIZE,
-        opacity=1.0
-    )
-
-    try:
-        track_pixels = Image.open(str(RESOURCES / 'trasa.png')).convert('RGB')
-    except Exception as e:
-        print(f"Błąd zasobów: {e}")
-        win.close()
-        return
-
-    # Używamy KeyStateHandler dla idealnie płynnego sterowania na Windows
     from pyglet.window import key
     key_handler = key.KeyStateHandler()
     win.winHandle.push_handlers(key_handler)
 
-    car_x, car_y = START_AREA
-    car_rotation_rad = 0.0
-    car_speed = 0.007 # Prędkość na klatkę
+    car_x, car_y = start_pos
+    car_rot = 0.0
     collision_count = 0
     start_time = core.getTime()
     finished = False
+    freeze_timer = 0.0
+    frame_clock = core.Clock()
 
     while not finished:
-        if event.getKeys(keyList=['escape']):
-            break
+        dt = frame_clock.getTime()
+        frame_clock.reset()
+        if event.getKeys(['escape']): break
         
-        dx, dy = 0, 0
-        if key_handler[key.LEFT]: dx -= 1
-        if key_handler[key.RIGHT]: dx += 1
-        if key_handler[key.UP]: dy += 1
-        if key_handler[key.DOWN]: dy -= 1
-        
-        if dx != 0 or dy != 0:
-            length = math.sqrt(dx**2 + dy**2)
-            car_x += (dx / length) * car_speed
-            car_y += (dy / length) * car_speed
-            car_rotation_rad = math.atan2(dx, dy)
-
-        # Detekcja kolizji i mety
-        half_w = CAR_SIZE[0] / 2
-        half_h = CAR_SIZE[1] / 2
-        corners_rel = [(-half_w, -half_h), (half_w, -half_h), (-half_w, half_h), (half_w, half_h)]
-        
-        collision = False
-        on_finish = False
-        
-        for cx, cy in corners_rel:
-            rx = car_x + cx * math.cos(car_rotation_rad) + cy * math.sin(car_rotation_rad)
-            ry = car_y - cx * math.sin(car_rotation_rad) + cy * math.cos(car_rotation_rad)
+        # System mrożenia sterowania
+        if freeze_timer > 0:
+            freeze_timer -= dt
+            car.opacity = 0.5
+        else:
+            car.opacity = 1.0
+            dx, dy = 0, 0
+            if key_handler[key.LEFT]: dx -= 1
+            if key_handler[key.RIGHT]: dx += 1
+            if key_handler[key.UP]: dy += 1
+            if key_handler[key.DOWN]: dy -= 1
             
-            # Najpierw sprawdzamy metę
-            if is_at_finish(rx, ry, track_pixels):
-                on_finish = True
-                break
-                
-            # Potem sprawdzamy kolizję z czarnym tłem
-            if not is_on_track(rx, ry, track_pixels):
-                collision = True
-                break
+            if dx != 0 or dy != 0:
+                length = math.sqrt(dx**2 + dy**2)
+                car_x += (dx / length) * 0.007
+                car_y += (dy / length) * 0.007
+                car_rot = math.atan2(dx, dy)
 
-        if on_finish:
-            finished = True
-            break
+        # Kolizja (4 rogi auta)
+        half_w, half_h = CAR_SIZE[0]/2, CAR_SIZE[1]/2
+        on_finish, collision = False, False
+        for cx, cy in [(-half_w, -half_h), (half_w, -half_h), (-half_w, half_h), (half_w, half_h)]:
+            rx = car_x + cx * math.cos(car_rot) + cy * math.sin(car_rot)
+            ry = car_y - cx * math.sin(car_rot) + cy * math.cos(car_rot)
+            if is_at_finish(rx, ry, track_pil): on_finish = True; break
+            if not is_on_track(rx, ry, track_pil): collision = True; break
 
+        if on_finish: finished = True; break
         if collision:
-            car_x, car_y = START_AREA
-            car_rotation_rad = 0.0
+            car_x, car_y = start_pos
+            car_rot = 0.0
             collision_count += 1
+            freeze_timer = 0.5 # 0.5 sekundy blokady
 
-        car.pos = [car_x, car_y]
-        car.ori = math.degrees(car_rotation_rad)
-
-        track_image.draw()
+        car.pos, car.ori = [car_x, car_y], math.degrees(car_rot)
+        track_stim.draw()
         car.draw()
         win.flip()
 
     duration = core.getTime() - start_time
-    
     if finished:
-        finish_text = visual.TextStim(win, text="Brawo! Meta osiągnięta!", color='green', height=0.08)
-        finish_text.draw()
+        visual.TextStim(win, text="META!", color='green', height=0.1).draw()
         win.flip()
         core.wait(2.0)
 
     win.close()
-
     if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, [], collision_count, duration)
+        _write_results(SCRIPT_DIR, [], collision_count, duration, difficulty)
 
 if __name__ == '__main__':
     main()
