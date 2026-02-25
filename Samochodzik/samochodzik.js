@@ -1,418 +1,234 @@
-/**
- * Samochodzik - Test nawigacji
- * Sterowanie: strzałki klawiatury
- * Mechanika: wykrywanie kolizji z białą trasą, reset na start po wyjechaniu poza trasę
- */
+/*********************** 
+ * Samochodzik - Test *
+ ***********************/
 
-// Globalne zmienne
-let psychoJS;
-let win;
-let carSprite;
-let trackImage;
-let carX, carY;
-let carSpeed = 0.005;
-let carRotation = 0;
-let carWidth = 0.05;
-let carHeight = 0.08;
+import { core, visual, util, data, sound, hardware } from './lib/psychojs-2025.1.1.js';
+const { PsychoJS } = core;
+const { Scheduler } = util;
+
+// 1. Inicjalizacja PsychoJS
+const psychoJS = new PsychoJS({
+    debug: false
+});
+
+// Otwarcie okna
+psychoJS.openWindow({
+    fullscr: false,
+    color: new util.Color([0, 0, 0]),
+    units: 'height',
+    waitBlanking: true
+});
+
+// Harmonogramy
+const flowScheduler = new Scheduler(psychoJS);
+const dialogCancelScheduler = new Scheduler(psychoJS);
+
+// --- KONFIGURACJA ---
+let expName = 'samochodzik';
+let expInfo = { 'participant': 'test' };
+
+// --- STAN GRY ---
+let trackImage, carSprite, welcomeText;
+let carX = -0.336, carY = -0.322, carRotation = 0;
+let collisionCount = 0, startTime = null, finished = false;
 let trackPixels = null;
-let trackWidth, trackHeight;
-let startArea = { x: 0.232, y: 0.383, width: 0.05, height: 0.05 };
-let isGameOver = false;
-let startTime = null;
-let collisionCount = 0;
-let globalClock;
-let routineTimer;
-let welcomeClock;
-let gameClock;
-let welcomeText;
-let welcomeKey;
+let trackImgElement = null;
+let carImgElement = null;
+const activeKeys = new Set();
 
-// Inicjalizacja PsychoJS
-function initPsychoJS() {
-    psychoJS = new PsychoJS({
-        debug: false
-    });
+// Obsługa klawiszy
+document.addEventListener('keydown', (e) => activeKeys.add(e.key));
+document.addEventListener('keyup', (e) => activeKeys.delete(e.key));
 
-    // Konfiguracja okna
-    win = new visual.Window({
-        fullscr: true,
-        color: new util.Color([0, 0, 0]),
-        units: 'height',
-        waitBlanking: false
-    });
+// --- RUTYNY ---
 
-    // Inicjalizacja myszy
-    psychoJS.experiment.setMouseVisible(true);
-    
-    // Inicjalizacja klawiatury
-    psychoJS.experiment.setKeyboard(new core.Keyboard());
-    
-    // Ustawienia eksperymentu
-    psychoJS.experiment.extraInfo = {
-        'expName': 'Samochodzik',
-        'participant': 'test'
-    };
-    
-    // Inicjalizacja globalnych timerów
-    globalClock = new util.Clock();
-    routineTimer = new util.CountdownTimer();
-    
-    // Inicjalizacja komponentów ekranu powitalnego
-    welcomeClock = new util.Clock();
-    welcomeText = new visual.TextStim({
-        win: win,
-        name: 'welcomeText',
-        text: 'TEST NAWIGACJI SAMOCHODZIKIEM\n\n' +
-              'Sterowanie:\n' +
-              'Strzałka w górę - jazda do przodu\n' +
-              'Strzałka w dół - jazda do tyłu\n' +
-              'Strzałka w lewo - skręt w lewo\n' +
-              'Strzałka w prawo - skręt w prawo\n\n' +
-              'Cel: poruszaj się po białej trasie\n' +
-              'Jeśli wyjedziesz poza trasę - reset do pozycji startowej\n\n' +
-              'Naciśnij SPACJĘ aby rozpocząć\n' +
-              'Naciśnij ESC aby wyjść',
-        font: 'Arial',
-        units: 'height',
-        pos: [0, 0],
-        height: 0.04,
-        color: new util.Color('white'),
-        wrapWidth: 1.5
-    });
-    
-    welcomeKey = new core.Keyboard({ psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true });
-    
-    // --- NOUS INTEGRATION: INIT ---
-    if (typeof window.electronTest !== 'undefined') {
-        psychoJS.experiment.save = function() { return Promise.resolve(); };
-    }
-    
-    // --- KONFIGURACJA OKNA: Ustawienia zgodne z PsychoJS ---
-    win._renderer.view.style.position = 'absolute';
-    win._renderer.view.style.left = '0px';
-    win._renderer.view.style.top = '0px';
-    win._renderer.view.style.width = '100%';
-    win._renderer.view.style.height = '100%';
-}
-
-// Wczytanie obrazów
-async function loadAssets() {
-    // Wczytanie tła (trasa)
-    trackImage = new visual.ImageStim({
-        win: win,
-        image: 'resources/trasa.png',
-        pos: [0, 0],
-        size: [1.0, 0.555], // 800x444 w stosunku do wysokości
-        opacity: 1.0
-    });
-
-    // Wczytanie samochodu
-    carSprite = new visual.ImageStim({
-        win: win,
-        image: 'resources/sam.png',
-        pos: [startArea.x, startArea.y],
-        size: [carWidth, carHeight],
-        opacity: 1.0
-    });
-
-    // Ustawienie początkowej pozycji
-    carX = startArea.x;
-    carY = startArea.y;
-    carSprite.setPos([carX, carY]);
-    
-    // Wczytanie pikseli tła dla detekcji kolizji
-    await loadTrackPixels();
-}
-
-// Wczytanie pikseli tła
-async function loadTrackPixels() {
-    return new Promise((resolve) => {
+async function experimentInit() {
+    const loadImg = (src) => new Promise((resolve, reject) => {
         const img = new Image();
-        img.onload = () => {
-            trackWidth = img.width;
-            trackHeight = img.height;
-            
-            // Utworzenie canvas do analizy pikseli
-            const canvas = document.createElement('canvas');
-            canvas.width = trackWidth;
-            canvas.height = trackHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            
-            // Pobranie danych pikseli
-            const imageData = ctx.getImageData(0, 0, trackWidth, trackHeight);
-            trackPixels = imageData.data;
-            
-            resolve();
-        };
-        img.src = 'resources/trasa.png';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
     });
-}
 
-// Konwersja współrzędnych PsychoJS na piksele
-function psychoToPixels(psychoX, psychoY) {
-    // PsychoJS: środek (0,0), zakres x: -0.5 do 0.5, y: -0.2775 do 0.2775 (units: 'height')
-    // Obraz: 800x444, środek (400, 222)
-    const pixelX = (psychoX + 0.5) * trackWidth;
-    const pixelY = (0.2775 - psychoY) * trackHeight;
-    return { x: pixelX, y: pixelY };
-}
+    try {
+        trackImgElement = await loadImg('resources/trasa.png');
+        carImgElement = await loadImg('resources/sam.png');
 
-// Sprawdzenie czy punkt jest na białej trasie
-function isOnTrack(psychoX, psychoY) {
-    const { x: pixelX, y: pixelY } = psychoToPixels(psychoX, psychoY);
-    
-    // Sprawdzenie granic obrazu
-    if (pixelX < 0 || pixelX >= trackWidth || pixelY < 0 || pixelY >= trackHeight) {
-        return false;
+        const cv = document.createElement('canvas');
+        cv.width = 800; cv.height = 444;
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(trackImgElement, 0, 0, 800, 444);
+        trackPixels = ctx.getImageData(0, 0, 800, 444).data;
+    } catch (e) {
+        console.error("Błąd ładowania obrazów:", e);
     }
-    
-    // Obliczenie indeksu piksela
-    const index = Math.floor(pixelY) * trackWidth * 4 + Math.floor(pixelX) * 4;
-    
-    // Sprawdzenie czy piksel jest biały (trasą)
-    const r = trackPixels[index];
-    const g = trackPixels[index + 1];
-    const b = trackPixels[index + 2];
-    
-    // Biały piksel: R, G, B > 200
-    return (r > 200 && g > 200 && b > 200);
+
+    trackImage = new visual.ImageStim({
+        win: psychoJS.window, name: 'track',
+        image: trackImgElement, pos: [0, 0], size: [1.6, 1.6 * 0.555]
+    });
+
+    carSprite = new visual.ImageStim({
+        win: psychoJS.window, name: 'car',
+        image: carImgElement, pos: [carX, carY], size: [0.03, 0.05]
+    });
+
+    welcomeText = new visual.TextStim({
+        win: psychoJS.window, text: "SAMOCHODZIK\n\nNaciśnij SPACJĘ aby rozpocząć",
+        color: new util.Color('white'), height: 0.05
+    });
+
+    // Zablokowanie standardowego zapisu PsychoJS CSV (wymagane przez Nous)
+    if (typeof window.electronTest !== 'undefined') {
+        psychoJS.experiment.save = () => Promise.resolve();
+    }
+    return Scheduler.Event.NEXT;
 }
 
-// Sprawdzenie kolizji samochodu z trasą
-function checkCollision() {
-    // Sprawdzenie czterech rogów samochodu
-    const halfW = carWidth / 2;
-    const halfH = carHeight / 2;
-    
-    // Punkty rogów w przestrzeni PsychoJS
-    const corners = [
-        { x: carX - halfW, y: carY - halfH }, // lewy dolny
-        { x: carX + halfW, y: carY - halfH }, // prawy dolny
-        { x: carX - halfW, y: carY + halfH }, // lewy górny
-        { x: carX + halfW, y: carY + halfH }  // prawy górny
-    ];
-    
-    // Sprawdzenie każdego rogu
-    for (const corner of corners) {
-        if (!isOnTrack(corner.x, corner.y)) {
-            return true; // Kolizja - punkt poza trasą
+function welcomeRoutine() {
+    return async function () {
+        if (welcomeText.status === PsychoJS.Status.NOT_STARTED) {
+            welcomeText.status = PsychoJS.Status.STARTED;
+            welcomeText.setAutoDraw(true);
         }
-    }
-    
-    return false; // Brak kolizji
+
+        if (activeKeys.has(' ') || activeKeys.has('Spacebar')) {
+            welcomeText.setAutoDraw(false);
+            startTime = Date.now();
+            return Scheduler.Event.NEXT;
+        }
+
+        // ESC na ekranie powitalnym = wyjście bez zapisu
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) {
+            return quitPsychoJS('Wyjście', false);
+        }
+
+        return Scheduler.Event.FLIP_REPEAT;
+    };
 }
 
-// Reset do pozycji startowej
-function resetToStart() {
-    carX = startArea.x;
-    carY = startArea.y;
-    carRotation = 0;
-    carSprite.setPos([carX, carY]);
-    carSprite.setOri(0);
-    collisionCount++;
-    
-    // Wizualna informacja o kolizji
-    console.log(`Kolizja! Reset do pozycji startowej. Licznik: ${collisionCount}`);
+function gameRoutine() {
+    return async function () {
+        if (trackImage.status === PsychoJS.Status.NOT_STARTED) {
+            trackImage.setAutoDraw(true);
+            carSprite.setAutoDraw(true);
+            trackImage.status = PsychoJS.Status.STARTED;
+        }
+
+        if (finished) {
+            trackImage.setAutoDraw(false);
+            carSprite.setAutoDraw(false);
+            return Scheduler.Event.NEXT;
+        }
+
+        // ESC w trakcie gry = wyjście bez zapisu
+        if (activeKeys.has('Escape') || activeKeys.has('escape')) {
+            return quitPsychoJS('Przerwano', false);
+        }
+
+        let dx = 0, dy = 0;
+        if (activeKeys.has('ArrowLeft')) dx -= 1;
+        if (activeKeys.has('ArrowRight')) dx += 1;
+        if (activeKeys.has('ArrowUp')) dy += 1;
+        if (activeKeys.has('ArrowDown')) dy -= 1;
+
+        if (dx !== 0 || dy !== 0) {
+            const len = Math.sqrt(dx * dx + dy * dy);
+            carX += (dx / len) * 0.007;
+            carY += (dy / len) * 0.007;
+            carRotation = Math.atan2(dx, dy);
+        }
+
+        // Kolizja
+        if (trackPixels) {
+            const px = Math.floor((carX / 1.6 + 0.5) * 800);
+            const py = Math.floor((0.2775 - carY / 1.6) * (444 / 0.555));
+            const idx = (Math.max(0, Math.min(443, py)) * 800 + Math.max(0, Math.min(799, px))) * 4;
+            const r = trackPixels[idx], g = trackPixels[idx + 1], b = trackPixels[idx + 2];
+
+            if (r > 200 && g < 100 && b < 100) { // Meta
+                finished = true;
+                return Scheduler.Event.NEXT;
+            }
+            if (r < 50 && g < 50 && b < 50) { // Ściana
+                carX = -0.336; carY = -0.322; carRotation = 0;
+                collisionCount++;
+            }
+        }
+
+        carSprite.setPos([carX, carY]);
+        carSprite.setOri(carRotation * (180 / Math.PI));
+
+        return Scheduler.Event.FLIP_REPEAT;
+    };
 }
 
-// Obsługa klawiatury
-function handleInput() {
-    const keys = psychoJS.experiment._keyboard.getKeys();
-    
-    // Sprawdzenie klawiszy
-    const upPressed = keys.includes('up') || keys.includes('ArrowUp');
-    const downPressed = keys.includes('down') || keys.includes('ArrowDown');
-    const leftPressed = keys.includes('left') || keys.includes('ArrowLeft');
-    const rightPressed = keys.includes('right') || keys.includes('ArrowRight');
-    const escapePressed = keys.includes('escape') || keys.includes('Escape');
-    
-    // Wyjście z gry
-    if (escapePressed) {
-        quitPsychoJS('Gra przerwana przez użytkownika', false);
-        return;
-    }
-    
-    // Sterowanie
-    if (upPressed) {
-        // Jazda do przodu
-        carX += Math.sin(carRotation) * carSpeed;
-        carY += Math.cos(carRotation) * carSpeed;
-    }
-    
-    if (downPressed) {
-        // Jazda do tyłu
-        carX -= Math.sin(carRotation) * carSpeed * 0.5;
-        carY -= Math.cos(carRotation) * carSpeed * 0.5;
-    }
-    
-    if (leftPressed) {
-        // Skręt w lewo
-        carRotation += 0.1;
-    }
-    
-    if (rightPressed) {
-        // Skręt w prawo
-        carRotation -= 0.1;
-    }
-    
-    // Aktualizacja pozycji samochodu
-    carSprite.setPos([carX, carY]);
-    carSprite.setOri(carRotation * (180 / Math.PI));
+function finishRoutine() {
+    let finishClock = null;
+    let finishText = null;
+
+    return async function () {
+        if (finishClock === null) {
+            finishClock = new util.Clock();
+            finishText = new visual.TextStim({
+                win: psychoJS.window, text: "META!\n\nZapisywanie punktów...",
+                color: new util.Color('green'), height: 0.1
+            });
+            finishText.setAutoDraw(true);
+        }
+
+        if (finishClock.getTime() > 2.0) {
+            finishText.setAutoDraw(false);
+            return quitPsychoJS('Koniec', true);
+        }
+
+        return Scheduler.Event.FLIP_REPEAT;
+    };
 }
 
-// Główna pętla gry
-function gameLoop() {
-    if (isGameOver) return;
-    
-    // Obsługa wejść
-    handleInput();
-    
-    // Sprawdzenie kolizji
-    if (checkCollision()) {
-        resetToStart();
-    }
-    
-    // Rysowanie
-    trackImage.draw();
-    carSprite.draw();
-    
-    // Aktualizacja ekranu
-    win.flip();
-    
-    // Kontynuacja pętli
-    requestAnimationFrame(gameLoop);
-}
-
-// Funkcja wyjścia z PsychoJS
+/**
+ * Zamykanie testu i wysyłka wyników zgodnie z PORADNIK_AGENTA.md
+ */
 async function quitPsychoJS(message, isCompleted) {
     if (typeof window.electronTest !== 'undefined') {
         if (isCompleted) {
-            // Zapis wyników
+            // Ujednolicone nazewnictwo wyników (Sekcja 2 i 3 Poradnika)
             window.electronTest.sendResults({
-                testId: 'Samochodzik',
-                subjectId: 'test',
+                testId: 'samochodzik',
+                subjectId: expInfo['participant'],
                 timestamp: new Date().toISOString(),
-                ilosc_poprawnych_nacisniec: 0,
+                ilosc_poprawnych_nacisniec: 1, // Dojechanie do mety to 1 poprawny przebieg
                 ilosc_blednych_nacisniec: collisionCount,
-                ogolna_ilosc_nacisniec: 0,
-                czas_trwania: startTime ? (Date.now() - startTime) : 0,
-                liczba_kolizji: collisionCount,
-                wyniki: {
-                    start_time: startTime,
-                    end_time: Date.now(),
-                    collisions: collisionCount
+                ogolna_ilosc_nacisniec: 1 + collisionCount,
+                czas_pokonania_trasy_sek: Math.round((Date.now() - startTime) / 1000),
+                // Nie dodajemy sredni_czas_reakcji, bo test go nie mierzy (Sekcja 2.52)
+                score: `Meta osiągnięta! Kolizje: ${collisionCount} | Czas: ${Math.round((Date.now() - startTime) / 1000)}s`,
+                statystyki: {
+                    czas_trwania_ms: Date.now() - startTime,
+                    liczba_kolizji: collisionCount
                 }
             });
         } else {
-            // Wyjście bez zapisu
+            // Wyjście przez ESC bez zapisu
             window.electronTest.close();
         }
     }
-    
-    win.close();
+
+    psychoJS.window.close();
     psychoJS.quit({ message: message, isCompleted: isCompleted });
+    return Scheduler.Event.QUIT;
 }
 
-// Instrukcje
-function showInstructions() {
-    const instr = new visual.TextStim({
-        win: win,
-        text: 'Test nawigacji samochodzikiem\n\n' +
-              'Sterowanie:\n' +
-              'Strzałka w górę - jazda do przodu\n' +
-              'Strzałka w dół - jazda do tyłu\n' +
-              'Strzałka w lewo - skręt w lewo\n' +
-              'Strzałka w prawo - skręt w prawo\n\n' +
-              'Cel: poruszaj się po białej trasie\n' +
-              'Jeśli wyjedziesz poza trasę - reset do pozycji startowej\n\n' +
-              'Naciśnij spację aby rozpocząć\n' +
-              'Naciśnij ESC aby wyjść',
-        color: 'white',
-        height: 0.05,
-        wrapWidth: 1.5
-    });
-    
-    instr.draw();
-    win.flip();
-    
-    // Oczekiwanie na spację lub ESC
-    return new Promise((resolve) => {
-        const checkKeys = () => {
-            const keys = psychoJS.experiment._keyboard.getKeys();
-            if (keys.includes('space') || keys.includes(' ')) {
-                resolve('start');
-            } else if (keys.includes('escape') || keys.includes('Escape')) {
-                resolve('exit');
-            } else {
-                requestAnimationFrame(checkKeys);
-            }
-        };
-        checkKeys();
-    });
-}
+// --- FLOW ---
+psychoJS.scheduleCondition(function () { return true; }, flowScheduler, dialogCancelScheduler);
 
-// Główna funkcja inicjalizująca
-async function main() {
-    try {
-        // Inicjalizacja
-        initPsychoJS();
-        
-        // Wczytanie zasobów
-        await loadAssets();
-        
-        // Ekran powitalny
-        await welcomeRoutine();
-        
-        // Rozpoczęcie gry
-        startTime = Date.now();
-        gameLoop();
-        
-    } catch (error) {
-        console.error('Błąd inicjalizacji:', error);
-        quitPsychoJS('Błąd inicjalizacji', false);
-    }
-}
+flowScheduler.add(experimentInit);
+flowScheduler.add(welcomeRoutine());
+flowScheduler.add(gameRoutine());
+flowScheduler.add(finishRoutine());
 
-// Ekran powitalny
-async function welcomeRoutine() {
-    return new Promise((resolve) => {
-        // Wyświetlenie tekstu powitalnego
-        welcomeText.setAutoDraw(true);
-        welcomeKey.start();
-        welcomeKey.clearEvents();
-        
-        // Pętla sprawdzająca klawisze
-        function checkWelcomeKeys() {
-            const keys = welcomeKey.getKeys({ keyList: ['space', 'escape'], waitRelease: false });
-            
-            if (keys.length > 0) {
-                const keyName = keys[0].name;
-                if (keyName === 'space') {
-                    // Rozpoczęcie gry
-                    welcomeText.setAutoDraw(false);
-                    resolve();
-                } else if (keyName === 'escape') {
-                    // Wyjście
-                    welcomeText.setAutoDraw(false);
-                    quitPsychoJS('Gra przerwana przez użytkownika', false);
-                }
-            } else {
-                // Kontynuacja pętli
-                requestAnimationFrame(checkWelcomeKeys);
-            }
-        }
-        
-        checkWelcomeKeys();
-    });
-}
-
-// Uruchomienie gry
-main().catch(error => {
-    console.error('Błąd:', error);
+psychoJS.start({
+    expName: expName,
+    expInfo: expInfo,
+    resources: []
 });
-
-// --- NOUS INTEGRATION: INIT ---
-if (typeof window.electronTest !== 'undefined') {
-    psychoJS.experiment.save = function() { return Promise.resolve(); };
-}
