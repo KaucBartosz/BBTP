@@ -879,7 +879,7 @@ async function quitPsychoJS(message, isCompleted) {
     if (psychoJS.experiment.isEntryEmpty()) {
         psychoJS.experiment.nextEntry();
     }
-    
+
     if (typeof window.electronTest !== 'undefined') {
         if (isCompleted) {
             let results = {
@@ -904,9 +904,9 @@ async function quitPsychoJS(message, isCompleted) {
             window.electronTest.close();
         }
     }
-    
+
     psychoJS.window.close();
     psychoJS.quit({ message: message, isCompleted: isCompleted });
-    
+
     return Scheduler.Event.QUIT;
 }
