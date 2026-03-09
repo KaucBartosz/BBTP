@@ -948,8 +948,9 @@ function feedbackRoutineBegin(snapshot) {
       routineTimer.add(1.500000);
       feedbackMaxDurationReached = false;
       // update component parameters for each repeat
-      feedbackStim.setColor(new util.Color(window.feedbackColor));
-      feedbackStim.setText(window.currentNumber);
+      // Bez feedbacku – wyświetlamy tylko "..." w szarym kolorze
+      feedbackStim.setColor(new util.Color('gray'));
+      feedbackStim.setText('...');
       psychoJS.experiment.addData('feedback.started', globalClock.getTime());
       feedbackMaxDuration = null
       // keep track of which components have finished
@@ -1088,8 +1089,8 @@ async function quitPsychoJS(message, isCompleted) {
 
         // Czy w ogóle było naciśnięcie (klawisza / dotyku)?
         let pressed = false;
-        if (trial.key_resp && typeof trial.key_resp.keys !== 'undefined') {
-          let k = trial.key_resp.keys;
+        let k = trial['key_resp.keys'] || (trial.key_resp && trial.key_resp.keys);
+        if (k !== undefined && k !== null) {
           if (Array.isArray(k)) {
             pressed = k.length > 0 && (k[0] !== '');
           } else if (typeof k === 'string') {
@@ -1099,11 +1100,12 @@ async function quitPsychoJS(message, isCompleted) {
 
         // RT z próby
         let currentRT = null;
-        if (trial.key_resp && typeof trial.key_resp.rt !== 'undefined') {
-          if (Array.isArray(trial.key_resp.rt)) {
-            currentRT = trial.key_resp.rt[0];
+        let rt = trial['key_resp.rt'] || (trial.key_resp && trial.key_resp.rt);
+        if (rt !== undefined && rt !== null) {
+          if (Array.isArray(rt)) {
+            currentRT = rt[0];
           } else {
-            currentRT = trial.key_resp.rt;
+            currentRT = rt;
           }
         }
 
@@ -1144,7 +1146,7 @@ async function quitPsychoJS(message, isCompleted) {
       let faRate = nogoTrials > 0 ? Math.round((falseAlarms / nogoTrials) * 100) : 0;
 
       let payload = {
-        testId: "GoNoGo_Numbers",
+        testId: "GoNoGo",
         subjectId: expInfo['participant'],
         timestamp: new Date().toISOString(),
 
@@ -1153,9 +1155,6 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_blednych_nacisniec: bledneNacisniecia,
         ogolna_ilosc_nacisniec: wszystkieNacisniecia,
         sredni_czas_reakcji: sredniCzasReakcji,
-
-        // Pole zachowane dla kompatybilności
-        czas_reakcji: sredniCzasReakcji,
 
         // Dodatkowe informacje
         poziom_trudnosci: window.difficultyName || "Nieznany",

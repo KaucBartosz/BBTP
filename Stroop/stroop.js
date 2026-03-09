@@ -434,6 +434,7 @@ async function quitPsychoJS(message, isCompleted) {
 
       window.electronTest.sendResults({
         testId: expName,
+        subjectId: expInfo['participant'],
         timestamp: new Date().toISOString(),
         ilosc_poprawnych_nacisniec: correct,
         ilosc_blednych_nacisniec: total - correct,
@@ -444,12 +445,7 @@ async function quitPsychoJS(message, isCompleted) {
         wyniki: trials_data
       });
     } else {
-      window.electronTest.sendResults({
-        testId: expName,
-        timestamp: new Date().toISOString(),
-        score: 'Test przerwany',
-        wyniki: []
-      });
+      window.electronTest.close();
     }
   }
 

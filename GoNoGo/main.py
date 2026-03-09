@@ -83,7 +83,7 @@ def main():
 
     # Komponenty próby
     number_stim = visual.TextStim(win, text='', color='white', height=0.15, alignText='center')
-    feedback_stim = visual.TextStim(win, text='', color='white', height=0.15, alignText='center')
+    feedback_stim = visual.TextStim(win, text='...', color='gray', height=0.15, alignText='center')
     mouse = event.Mouse(win=win)
     mouse.setVisible(True)
 
@@ -133,9 +133,9 @@ def main():
             'rt': rt_sec if pressed else None,
         })
 
-        # Feedback
-        feedback_stim.setText(current_number)
-        feedback_stim.setColor('green' if was_correct else 'red')
+        # Feedback – bez informacji o poprawności (szare "...")
+        feedback_stim.setText('...')
+        feedback_stim.setColor('gray')
         feedback_stim.draw()
         win.flip()
         core.wait(1.5)

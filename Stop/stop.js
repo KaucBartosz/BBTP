@@ -818,7 +818,7 @@ async function quitPsychoJS(message, isCompleted) {
 
       // Budujemy paczkę dla Launchera
       let payload = {
-        testId: expInfo['expName'] || "Test Reakcji STOP",
+        testId: "Stop",
         subjectId: expInfo['participant'],
         timestamp: new Date().toISOString(),
 
@@ -827,23 +827,17 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_blednych_nacisniec: incorrectResponses,
         ogolna_ilosc_nacisniec: respondedCount,
         sredni_czas_reakcji: sredniCzasReakcji,
-        totalClicks: totalClicks,
-
-        // Pole zachowane dla kompatybilności
-        czas_reakcji: sredniCzasReakcji,
 
         // Ujednolicony format score
-        score: `Poprawne: ${correctCount} | Błędne: ${incorrectResponses} | Łącznie: ${respondedCount} | Kliknięcia: ${totalClicks} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+        score: `Poprawne: ${correctCount} | Błędne: ${incorrectResponses} | Łącznie: ${respondedCount} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
 
         // Statystyki szczegółowe
         statystyki: {
-          sredni_czas_ms: sredniCzasReakcji,
           poprawne_reakcje: correctCount,
           wszystkie_proby: totalTrials,
           skutecznosc: accuracy,
           reakcje: respondedCount,
           bledne_reakcje: incorrectResponses,
-          totalClicks: totalClicks,
           falstarty: allData.filter(t => !!t.isFalstart).length
         },
 
