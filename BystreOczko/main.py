@@ -26,8 +26,7 @@ N_TRIALS = 5 if NOUS_TRAINING else 10
 INSTRUCTION = (
     'Przed tobą pojawi się plansza z sygnalizatorami. W losowym interwale czasu '
     'jeden z nich zapali się na zielono. Twoim zadaniem jest naciśnięcie na sygnalizator '
-    'z zielonym światłem. W przypadku poprawnego trafienia wszystkie zapalą się na zielono. '
-    'W przypadku błędnego trafienia, wszystkie zgasną. Powodzenia!'
+    'z zielonym światłem. Powodzenia!'
 )
 
 
@@ -78,6 +77,32 @@ def main():
             _write_results(SCRIPT_DIR, [], 0, 0, 0, 0, 0)
         return
 
+    # Ekran wyboru ilości rund
+    n_trials_text = (
+        'Wybierz ilość rund:\n\n'
+        '1 - 10 rund\n'
+        '2 - 30 rund\n'
+        '3 - 60 rund\n\n'
+        'Naciśnij odpowiedni klawisz.'
+    )
+    n_trials_stim = visual.TextStim(
+        win, text=n_trials_text,
+        color='white', height=0.05,
+        wrapWidth=1.8, alignText='center',
+    )
+    n_trials_stim.draw()
+    win.flip()
+    keys = event.waitKeys(keyList=['1', '2', '3', 'escape'])
+    keyname = keys[0] if keys else None
+    if keyname == 'escape':
+        win.close()
+        if NOUS_LAUNCHER:
+            _write_results(SCRIPT_DIR, [], 0, 0, 0, 0, 0)
+        return
+    
+    n_trials_map = {'1': 10, '2': 30, '3': 60}
+    n_trials = n_trials_map.get(keyname, 10) if not NOUS_TRAINING else 5
+
     # Siatka sygnalizatorów (współrzędne jak w JS)
     x_coords = [(i - (COLS - 1) / 2) * 0.18 for i in range(COLS)]
     y_coords = [0.2, 0.0, -0.2]
@@ -100,7 +125,7 @@ def main():
     trial_clock = core.Clock()
     rt_clock = core.Clock()
 
-    for trial_idx in range(N_TRIALS):
+    for trial_idx in range(n_trials):
         # Sprawdź ESC
         if event.getKeys(keyList=['escape']):
             break
@@ -128,6 +153,8 @@ def main():
         # Maksymalny czas próby: green_onset (max 2s) + REACTION_TIME_LIMIT_SEC (3s) + margin
         max_trial_time = green_onset + REACTION_TIME_LIMIT_SEC + 1.0
 
+        clicked_row = None
+        clicked_col = None
         while trial_clock.getTime() < max_trial_time:
             t = trial_clock.getTime()
 
@@ -151,15 +178,6 @@ def main():
                 responded = True
                 rt = REACTION_TIME_LIMIT_SEC  # czas reakcji = limit
                 correct = 0
-                # Feedback wizualny - wszystkie zgaszone
-                for rr in range(ROWS):
-                    for cc in range(COLS):
-                        lights[rr][cc].setImage(str(RESOURCES / 'syg.png'))
-                # Narysuj i wyświetl feedback natychmiast
-                for rr in range(ROWS):
-                    for cc in range(COLS):
-                        lights[rr][cc].draw()
-                win.flip()
                 break
 
             # Kliknięcie myszy
@@ -173,17 +191,10 @@ def main():
                     for c in range(COLS):
                         if lights[r][c].contains(pos):
                             responded = True
+                            clicked_row = r
+                            clicked_col = c
                             rt = rt_clock.getTime()
                             correct = 1 if (r == target_row and c == target_col) else 0
-                            # Feedback wizualny - wszystkie zgaszone niezależnie od wyniku
-                            for rr in range(ROWS):
-                                for cc in range(COLS):
-                                    lights[rr][cc].setImage(str(RESOURCES / 'syg.png'))
-                            # Narysuj i wyświetl feedback natychmiast
-                            for rr in range(ROWS):
-                                for cc in range(COLS):
-                                    lights[rr][cc].draw()
-                            win.flip()
                             break
                     if responded:
                         break
@@ -192,18 +203,15 @@ def main():
 
             win.flip()
 
-        # Feedback przez krótką chwilę
-        if responded:
-            for r in range(ROWS):
-                for c in range(COLS):
-                    lights[r][c].draw()
-            win.flip()
-            core.wait(FEEDBACK_TIME)
+        # Brak core.wait(FEEDBACK_TIME) - przechodzimy dalej natychmiast opcjonalnym win.flip() do czyszczenia
+        win.flip()
 
         trials_data.append({
             'greenOnset': green_onset,
             'target_row': target_row,
             'target_col': target_col,
+            'clicked_row': clicked_row,
+            'clicked_col': clicked_col,
             'rt': rt,
             'correct': correct,
         })
