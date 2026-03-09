@@ -14,21 +14,28 @@ const { round } = util;
 // store info about the experiment session:
 let expName = 'stop';  // from the Builder filename that created this script
 let expInfo = {
-    'participant': `${util.pad(Number.parseFloat(util.randint(0, 999999)).toFixed(0), 6)}`,
-    'session': '001',
+  'participant': `${util.pad(Number.parseFloat(util.randint(0, 999999)).toFixed(0), 6)}`,
+  'session': '001',
 };
 let PILOTING = util.getUrlParameters().has('__pilotToken');
 
 // Start code blocks for 'Before Experiment'
-// init psychoJS:
-const psychoJS = new PsychoJS({
-  debug: true
-});
+// init psychoJS with error handling:
+let psychoJS;
+try {
+  psychoJS = new PsychoJS({
+    debug: true
+  });
+  console.log("PsychoJS initialized successfully");
+} catch (error) {
+  console.error("Failed to initialize PsychoJS:", error);
+  throw error;
+}
 
 // open window:
 psychoJS.openWindow({
   fullscr: true,
-  color: new util.Color([0,0,0]),
+  color: new util.Color([0, 0, 0]),
   units: 'height',
   waitBlanking: true,
   backgroundImage: 'C:/Users/Bartosz/Desktop/Pavlovia/ReakcjaSTOP/resources/tlo.png',
@@ -42,7 +49,7 @@ psychoJS.schedule(psychoJS.gui.DlgFromDict({
 
 const flowScheduler = new Scheduler(psychoJS);
 const dialogCancelScheduler = new Scheduler(psychoJS);
-psychoJS.scheduleCondition(function() { return (psychoJS.gui.dialogComponent.button === 'OK'); },flowScheduler, dialogCancelScheduler);
+psychoJS.scheduleCondition(function () { return (psychoJS.gui.dialogComponent.button === 'OK'); }, flowScheduler, dialogCancelScheduler);
 
 // flowScheduler gets run if the participants presses OK
 flowScheduler.add(updateInfo); // add timeStamp
@@ -66,11 +73,11 @@ psychoJS.start({
   expInfo: expInfo,
   resources: [
     // resources:
-    {'name': 'resources/tlo.png', 'path': 'resources/tlo.png'},
-    {'name': 'resources/car.png', 'path': 'resources/car.png'},
-    {'name': 'resources/stop.png', 'path': 'resources/stop.png'},
-    {'name': 'tlo.png', 'path': 'resources/tlo.png'},
-    {'name': 'stop.png', 'path': 'resources/stop.png'},
+    { 'name': 'resources/tlo.png', 'path': 'resources/tlo.png' },
+    { 'name': 'resources/car.png', 'path': 'resources/car.png' },
+    { 'name': 'resources/stop.png', 'path': 'resources/stop.png' },
+    { 'name': 'tlo.png', 'path': 'resources/tlo.png' },
+    { 'name': 'stop.png', 'path': 'resources/stop.png' },
   ]
 });
 
@@ -96,9 +103,9 @@ async function updateInfo() {
 
   // add info from the URL:
   util.addInfoFromUrl(expInfo);
-  
 
-  
+
+
   psychoJS.experiment.dataFileName = (("." + "/") + `data/${expInfo["participant"]}_${expName}_${expInfo["date"]}`);
   psychoJS.experiment.field_separator = '\t';
 
@@ -123,57 +130,57 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Witaj!\n\nNa ekranie porusza się samochodzik.\nTwoim zadaniem jest naciśnięcie na niego, gdy gdzieś na ekranie pojawi się znak stop.\n\nNaciśnij SPACJĘ, aby rozpocząć.\n',
+    text: 'Witaj!\n\nNa ekranie znajduje się samochód.\nTwoim zadaniem jest go zatrzymać, gdy zobaczysz znak STOP.\n\nAby to zrobić, naciśnij na samochód lub naciśnij klawisz SPACJA.\n\nNaciśnij SPACJĘ, aby rozpocząć.\n',
     font: 'Arial',
-    units: undefined, 
-    pos: [0, 0], draggable: false, height: 0.05,  wrapWidth: undefined, ori: 0.0,
+    units: undefined,
+    pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
     languageStyle: 'LTR',
-    color: new util.Color('white'),  opacity: undefined,
-    depth: 0.0 
+    color: new util.Color('white'), opacity: undefined,
+    depth: 0.0
   });
-  
-  key_resp = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
-  
+
+  key_resp = new core.Keyboard({ psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true });
+
   // Initialize components for Routine "drive"
   driveClock = new util.Clock();
   tlo = new visual.ImageStim({
-    win : psychoJS.window,
-    name : 'tlo', units : undefined, 
-    image : 'resources/tlo.png', mask : undefined,
-    anchor : 'center',
-    ori : 0.0, 
-    pos : [0, 0], 
+    win: psychoJS.window,
+    name: 'tlo', units: undefined,
+    image: 'resources/tlo.png', mask: undefined,
+    anchor: 'center',
+    ori: 0.0,
+    pos: [0, 0],
     draggable: false,
-    size : [2, 1],
-    color : new util.Color([1,1,1]), opacity : undefined,
-    flipHoriz : false, flipVert : false,
-    texRes : 128.0, interpolate : true, depth : 0.0 
+    size: [2, 1],
+    color: new util.Color([1, 1, 1]), opacity: undefined,
+    flipHoriz: false, flipVert: false,
+    texRes: 128.0, interpolate: true, depth: 0.0
   });
   car = new visual.ImageStim({
-    win : psychoJS.window,
-    name : 'car', units : undefined, 
-    image : 'resources/car.png', mask : undefined,
-    anchor : 'center',
-    ori : 0.0, 
-    pos : [0, (- 0.3)], 
+    win: psychoJS.window,
+    name: 'car', units: undefined,
+    image: 'resources/car.png', mask: undefined,
+    anchor: 'center',
+    ori: 0.0,
+    pos: [0, (- 0.3)],
     draggable: false,
-    size : [0.28, 0.28],
-    color : new util.Color([1,1,1]), opacity : undefined,
-    flipHoriz : false, flipVert : false,
-    texRes : 128.0, interpolate : true, depth : -1.0 
+    size: [0.28, 0.28],
+    color: new util.Color([1, 1, 1]), opacity: undefined,
+    flipHoriz: false, flipVert: false,
+    texRes: 128.0, interpolate: true, depth: -1.0
   });
   stopSign = new visual.ImageStim({
-    win : psychoJS.window,
-    name : 'stopSign', units : undefined, 
-    image : 'resources/stop.png', mask : undefined,
-    anchor : 'center',
-    ori : 0.0, 
-    pos : [0, 0.2], 
+    win: psychoJS.window,
+    name: 'stopSign', units: undefined,
+    image: 'resources/stop.png', mask: undefined,
+    anchor: 'center',
+    ori: 0.0,
+    pos: [0, 0.2],
     draggable: false,
-    size : [0.2, 0.2],
-    color : new util.Color([1,1,1]), opacity : undefined,
-    flipHoriz : false, flipVert : false,
-    texRes : 128.0, interpolate : true, depth : -2.0 
+    size: [0.2, 0.2],
+    color: new util.Color([1, 1, 1]), opacity: undefined,
+    flipHoriz: false, flipVert: false,
+    texRes: 128.0, interpolate: true, depth: -2.0
   });
   mouse = new core.Mouse({
     win: psychoJS.window,
@@ -181,14 +188,14 @@ async function experimentInit() {
   mouse.mouseClock = new util.Clock();
   // --- INTEGRACJA Z LAUNCHEREM (INIT) ---
   if (typeof window.electronTest !== 'undefined') {
-      console.log("Wykryto PsychoLauncher. Blokowanie zapisu CSV.");
-      
-      // Nadpisujemy funkcję zapisu - zwracamy pustą obietnicę, 
-      // dzięki czemu PsychoPy myśli, że zapisało, ale nic nie pobiera.
-      psychoJS.experiment.save = function() {
-          return Promise.resolve(); 
-      };
-  }                       
+    console.log("Wykryto PsychoLauncher. Blokowanie zapisu CSV.");
+
+    // Nadpisujemy funkcję zapisu - zwracamy pustą obietnicę, 
+    // dzięki czemu PsychoPy myśli, że zapisało, ale nic nie pobiera.
+    psychoJS.experiment.save = function () {
+      return Promise.resolve();
+    };
+  }
   // --- Obsługa ekranu dotykowego (klik na auto / znak STOP) ---
   window._touchJustStarted = false;
   window._touchPsychoX = null;
@@ -220,7 +227,7 @@ async function experimentInit() {
   // Create some handy timers
   globalClock = new util.Clock();  // to track the time since experiment started
   routineTimer = new util.CountdownTimer();  // to track time remaining of each (non-slip) routine
-  
+
   return Scheduler.Event.NEXT;
 }
 
@@ -236,7 +243,7 @@ var welcomeComponents;
 function welcomeRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot); // ensure that .thisN vals are up to date
-    
+
     //--- Prepare to start Routine 'welcome' ---
     t = 0;
     frameN = -1;
@@ -256,7 +263,7 @@ function welcomeRoutineBegin(snapshot) {
     welcomeComponents = [];
     welcomeComponents.push(text);
     welcomeComponents.push(key_resp);
-    
+
     for (const thisComponent of welcomeComponents)
       if ('status' in thisComponent)
         thisComponent.status = PsychoJS.Status.NOT_STARTED;
@@ -272,37 +279,37 @@ function welcomeRoutineEachFrame() {
     t = welcomeClock.getTime();
     frameN = frameN + 1;// number of completed frames (so 0 is the first frame)
     // update/draw components on each frame
-    
+
     // *text* updates
     if (t >= 0.0 && text.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       text.tStart = t;  // (not accounting for frame time here)
       text.frameNStart = frameN;  // exact frame index
-      
+
       text.setAutoDraw(true);
     }
-    
-    
+
+
     // if text is active this frame...
     if (text.status === PsychoJS.Status.STARTED) {
     }
-    
-    
+
+
     // *key_resp* updates
     if (t >= 0.0 && key_resp.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       key_resp.tStart = t;  // (not accounting for frame time here)
       key_resp.frameNStart = frameN;  // exact frame index
-      
+
       // keyboard checking is just starting
-      psychoJS.window.callOnFlip(function() { key_resp.clock.reset(); });  // t=0 on next screen flip
-      psychoJS.window.callOnFlip(function() { key_resp.start(); }); // start on screen flip
-      psychoJS.window.callOnFlip(function() { key_resp.clearEvents(); });
+      psychoJS.window.callOnFlip(function () { key_resp.clock.reset(); });  // t=0 on next screen flip
+      psychoJS.window.callOnFlip(function () { key_resp.start(); }); // start on screen flip
+      psychoJS.window.callOnFlip(function () { key_resp.clearEvents(); });
     }
-    
+
     // if key_resp is active this frame...
     if (key_resp.status === PsychoJS.Status.STARTED) {
-      let theseKeys = key_resp.getKeys({keyList: ['y','n','left','right','space'], waitRelease: false});
+      let theseKeys = key_resp.getKeys({ keyList: ['y', 'n', 'left', 'right', 'space'], waitRelease: false });
       _key_resp_allKeys = _key_resp_allKeys.concat(theseKeys);
       if (_key_resp_allKeys.length > 0) {
         key_resp.keys = _key_resp_allKeys[_key_resp_allKeys.length - 1].name;  // just the last key pressed
@@ -312,25 +319,25 @@ function welcomeRoutineEachFrame() {
         continueRoutine = false;
       }
     }
-    
+
     // check for quit (typically the Esc key)
-    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({keyList:['escape']}).length > 0) {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
       return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
     }
-    
+
     // check if the Routine should terminate
     if (!continueRoutine) {  // a component has requested a forced-end of Routine
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
     }
-    
+
     continueRoutine = false;  // reverts to True if at least one component still running
     for (const thisComponent of welcomeComponents)
       if ('status' in thisComponent && thisComponent.status !== PsychoJS.Status.FINISHED) {
         continueRoutine = true;
         break;
       }
-    
+
     // refresh the screen if continuing
     if (continueRoutine) {
       return Scheduler.Event.FLIP_REPEAT;
@@ -356,15 +363,15 @@ function welcomeRoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('key_resp.keys', key_resp.keys);
     if (typeof key_resp.keys !== 'undefined') {  // we had a response
-        psychoJS.experiment.addData('key_resp.rt', key_resp.rt);
-        psychoJS.experiment.addData('key_resp.duration', key_resp.duration);
-        routineTimer.reset();
-        }
-    
+      psychoJS.experiment.addData('key_resp.rt', key_resp.rt);
+      psychoJS.experiment.addData('key_resp.duration', key_resp.duration);
+      routineTimer.reset();
+    }
+
     key_resp.stop();
     // the Routine "welcome" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
-    
+
     // Routines running outside a loop should always advance the datafile row
     if (currentLoop === psychoJS.experiment) {
       psychoJS.experiment.nextEntry(snapshot);
@@ -376,9 +383,9 @@ function welcomeRoutineEnd(snapshot) {
 
 var trials;
 function trialsLoopBegin(trialsLoopScheduler, snapshot) {
-  return async function() {
+  return async function () {
     TrialHandler.fromSnapshot(snapshot); // update internal variables (.thisN etc) of the loop
-    
+
     // set up handler to look after randomisation of conditions etc
     trials = new TrialHandler({
       psychoJS: psychoJS,
@@ -389,7 +396,7 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
     });
     psychoJS.experiment.addLoop(trials); // add the loop to the experiment
     currentLoop = trials;  // we're now the current loop
-    
+
     // Schedule all the trials in the trialList:
     for (const thisTrial of trials) {
       snapshot = trials.getSnapshot();
@@ -399,7 +406,7 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
       trialsLoopScheduler.add(driveRoutineEnd(snapshot));
       trialsLoopScheduler.add(trialsLoopEndIteration(trialsLoopScheduler, snapshot));
     }
-    
+
     return Scheduler.Event.NEXT;
   }
 }
@@ -409,7 +416,7 @@ async function trialsLoopEnd() {
   // terminate loop
   psychoJS.experiment.removeLoop(trials);
   // update the current loop from the ExperimentHandler
-  if (psychoJS.experiment._unfinishedLoops.length>0)
+  if (psychoJS.experiment._unfinishedLoops.length > 0)
     currentLoop = psychoJS.experiment._unfinishedLoops.at(-1);
   else
     currentLoop = psychoJS.experiment;  // so we use addData from the experiment
@@ -431,7 +438,7 @@ function trialsLoopEndIteration(scheduler, snapshot) {
       } else {
         psychoJS.experiment.nextEntry(snapshot);
       }
-    return Scheduler.Event.NEXT;
+      return Scheduler.Event.NEXT;
     }
   };
 }
@@ -455,7 +462,7 @@ var driveComponents;
 function driveRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot); // ensure that .thisN vals are up to date
-    
+
     //--- Prepare to start Routine 'drive' ---
     t = 0;
     frameN = -1;
@@ -476,39 +483,36 @@ function driveRoutineBegin(snapshot) {
     mouse.time = [];
     gotValidClick = false; // until a click is received
     // Run 'Begin Routine' code from code
-    // losowy czas pojawienia STOP (2–5 s)
-    stopOnset = 2.0 + Math.random() * 3.0;
-    
-    
+    // losowy czas pojawienia STOP (1–3 s)
+    stopOnset = 1.0 + Math.random() * 2.0;
+
+
     // STOP ukryty
     // losowy X dla znaku STOP
     let stopY = 0.2;
     let stopX = -0.6 + Math.random() * 1.2;  // zakres -0.6..0.6
     stopSign.setPos([stopX, stopY]);
-    
+
     stop_visible = false;
     stopSign.setOpacity(0.0);
-    
+
     // zegary
     trialClock = new util.Clock();
     stopClock = null;
-    
+
     // odpowiedź
     rt = null;
     responded = false;
     correct = 0;
-    
-    // ruch auta po jezdni (-0.5 do 0.5)
-    car_start_x = -0.5;
-    car_y = car.pos[1];
-    car_speed = 0.3;
-    car_direction = 1;
-    car.setPos([car_start_x, car_y]);
+    isFalstart = false;
+
+    // Samochód stoi w miejscu (5% w prawo od środka ekranu)
+    car.setPos([0.25, -0.3]);
     // Reset dotyku na początku próby
     window._touchJustStarted = false;
     window._touchPsychoX = null;
     window._touchPsychoY = null;
-    
+
     psychoJS.experiment.addData('drive.started', globalClock.getTime());
     driveMaxDuration = null
     // keep track of which components have finished
@@ -517,7 +521,7 @@ function driveRoutineBegin(snapshot) {
     driveComponents.push(car);
     driveComponents.push(stopSign);
     driveComponents.push(mouse);
-    
+
     for (const thisComponent of driveComponents)
       if ('status' in thisComponent)
         thisComponent.status = PsychoJS.Status.NOT_STARTED;
@@ -537,68 +541,68 @@ function driveRoutineEachFrame() {
     t = driveClock.getTime();
     frameN = frameN + 1;// number of completed frames (so 0 is the first frame)
     // update/draw components on each frame
-    
+
     // *tlo* updates
     if (t >= 0.0 && tlo.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       tlo.tStart = t;  // (not accounting for frame time here)
       tlo.frameNStart = frameN;  // exact frame index
-      
+
       tlo.setAutoDraw(true);
     }
-    
-    
+
+
     // if tlo is active this frame...
     if (tlo.status === PsychoJS.Status.STARTED) {
     }
-    
-    
+
+
     // *car* updates
     if (t >= 0.0 && car.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       car.tStart = t;  // (not accounting for frame time here)
       car.frameNStart = frameN;  // exact frame index
-      
+
       car.setAutoDraw(true);
     }
-    
-    
+
+
     // if car is active this frame...
     if (car.status === PsychoJS.Status.STARTED) {
     }
-    
-    
+
+
     // *stopSign* updates
     if (t >= 0.0 && stopSign.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       stopSign.tStart = t;  // (not accounting for frame time here)
       stopSign.frameNStart = frameN;  // exact frame index
-      
+
       stopSign.setAutoDraw(true);
     }
-    
-    
+
+
     // if stopSign is active this frame...
     if (stopSign.status === PsychoJS.Status.STARTED) {
     }
-    
+
     // *mouse* updates
     if (t >= 0.0 && mouse.status === PsychoJS.Status.NOT_STARTED) {
       // keep track of start time/frame for later
       mouse.tStart = t;  // (not accounting for frame time here)
       mouse.frameNStart = frameN;  // exact frame index
-      
+
       mouse.status = PsychoJS.Status.STARTED;
       mouse.mouseClock.reset();
       prevButtonState = mouse.getPressed();  // if button is down already this ISN'T a new click
     }
-    
+
     // if mouse is active this frame...
     if (mouse.status === PsychoJS.Status.STARTED) {
       _mouseButtons = mouse.getPressed();
-      if (!_mouseButtons.every( (e,i,) => (e == prevButtonState[i]) )) { // button state changed?
+      if (!_mouseButtons.every((e, i,) => (e == prevButtonState[i]))) { // button state changed?
         prevButtonState = _mouseButtons;
-        if (_mouseButtons.reduce( (e, acc) => (e+acc) ) > 0) { // state changed to a new click
+        if (_mouseButtons.reduce((e, acc) => (e + acc)) > 0) { // state changed to a new click
           _mouseXYs = mouse.getPos();
           mouse.x.push(_mouseXYs[0]);
           mouse.y.push(_mouseXYs[1]);
@@ -622,31 +626,16 @@ function driveRoutineEachFrame() {
       let hy = (Array.isArray(size) ? size[1] : size) / 2;
       return Math.abs(px - pos[0]) <= hx && Math.abs(py - pos[1]) <= hy;
     }
-    // --- ruch auta po osi X (między -0.5 a 0.5) ---
-    let dt = 1.0 / 60.0;
-    let pos = car.pos;
-    let x = pos[0];
-    let y = pos[1];
-    
-    x = x + car_direction * car_speed * dt;
-    
-    if (x > 0.5) {
-      x = 0.5;
-      car_direction = -1;
-    } else if (x < -0.5) {
-      x = -0.5;
-      car_direction = 1;
-    }
-    
-    car.setPos([x, y]);
-    
+    // Samochód stoi w miejscu (5% w prawo od środka ekranu)
+    car.setPos([0.25, -0.3]);
+
     // --- pojawienie się STOP ---
     if (!stop_visible && t >= stopOnset) {
       stop_visible = true;
       stopSign.setOpacity(1.0);
       stopClock = new util.Clock();
     }
-    
+
     // --- klik (mysz) w auto LUB znak STOP po pojawieniu się STOP ---
     let buttons = mouse.getPressed();
     if (stop_visible && !responded && (buttons[0] || buttons[1] || buttons[2])) {
@@ -658,10 +647,37 @@ function driveRoutineEachFrame() {
       }
     }
 
+    // --- spacja (klawiatura) po pojawieniu się STOP ---
+    let keys = psychoJS.eventManager.getKeys({ keyList: ['space'], waitRelease: false });
+    if (stop_visible && !responded && keys.length > 0) {
+      responded = true;
+      rt = stopClock.getTime();
+      correct = 1;
+      continueRoutine = false;
+    }
+
+    // --- REAKCJA PRZED ZNAKIEM STOP (Falstart) ---
+    if (!stop_visible && !responded) {
+      let buttons_down = mouse.getPressed();
+      let touch_down = window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas;
+      
+      if (buttons_down[0] || buttons_down[1] || buttons_down[2] || keys.length > 0 || touch_down) {
+        responded = true;
+        correct = 0;
+        isFalstart = true;
+        continueRoutine = false;
+        if (touch_down) {
+          window._touchJustStarted = false;
+          window._touchPsychoX = null;
+          window._touchPsychoY = null;
+        }
+      }
+    }
+
     // --- dotyk w auto lub znak STOP ---
     if (stop_visible && !responded && window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas) {
       if (pointInStim(window._touchPsychoX, window._touchPsychoY, car) ||
-          pointInStim(window._touchPsychoX, window._touchPsychoY, stopSign)) {
+        pointInStim(window._touchPsychoX, window._touchPsychoY, stopSign)) {
         responded = true;
         rt = stopClock.getTime();
         correct = 1;
@@ -675,30 +691,30 @@ function driveRoutineEachFrame() {
       window._touchPsychoX = null;
       window._touchPsychoY = null;
     }
-    
-    // --- limit czasu 10 s ---
-    if (t >= 10.0) {
+
+    // --- limit czasu 5 s od pojawienia się STOP ---
+    if (stop_visible && stopClock && stopClock.getTime() >= 5.0) {
       continueRoutine = false;
     }
-    
+
     // check for quit (typically the Esc key)
-    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({keyList:['escape']}).length > 0) {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
       return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
     }
-    
+
     // check if the Routine should terminate
     if (!continueRoutine) {  // a component has requested a forced-end of Routine
       routineForceEnded = true;
       return Scheduler.Event.NEXT;
     }
-    
+
     continueRoutine = false;  // reverts to True if at least one component still running
     for (const thisComponent of driveComponents)
       if ('status' in thisComponent && thisComponent.status !== PsychoJS.Status.FINISHED) {
         continueRoutine = true;
         break;
       }
-    
+
     // refresh the screen if continuing
     if (continueRoutine) {
       return Scheduler.Event.FLIP_REPEAT;
@@ -725,16 +741,17 @@ function driveRoutineEnd(snapshot) {
     psychoJS.experiment.addData('mouse.midButton', mouse.midButton);
     psychoJS.experiment.addData('mouse.rightButton', mouse.rightButton);
     psychoJS.experiment.addData('mouse.time', mouse.time);
-    
+
     // Run 'End Routine' code from code
     psychoJS.experiment.addData('stopOnset', stopOnset);
     psychoJS.experiment.addData('rt', rt);
     psychoJS.experiment.addData('responded', responded);
     psychoJS.experiment.addData('correct', correct);
-    
+    psychoJS.experiment.addData('isFalstart', isFalstart);
+
     // the Routine "drive" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
-    
+
     // Routines running outside a loop should always advance the datafile row
     if (currentLoop === psychoJS.experiment) {
       psychoJS.experiment.nextEntry(snapshot);
@@ -748,7 +765,7 @@ function importConditions(currentLoop) {
   return async function () {
     psychoJS.importAttributes(currentLoop.getCurrentTrial());
     return Scheduler.Event.NEXT;
-    };
+  };
 }
 
 
@@ -758,7 +775,7 @@ async function quitPsychoJS(message, isCompleted) {
     psychoJS.experiment.nextEntry();
   }
   // --- INTEGRACJA Z LAUNCHEREM (WYSYŁKA DANYCH) ---
-  
+
   if (typeof window.electronTest !== 'undefined') {
     if (isCompleted) {
       // Pobieramy surowe dane tylko z prób (mają pole 'correct')
@@ -775,22 +792,25 @@ async function quitPsychoJS(message, isCompleted) {
 
       // Analiza danych
       for (let trial of allData) {
-          let responded = !!trial.responded;
-          let isCorrect = trial.correct === 1;
+        let responded = !!trial.responded;
+        let isCorrect = trial.correct === 1;
 
-          if (responded) {
-              respondedCount++;
-              if (isCorrect) {
-                  correctCount++;
-              } else {
-                  incorrectResponses++;
-              }
-              if (typeof trial.rt === 'number' && trial.rt >= 0) {
-                  totalRT += trial.rt;
-                  validRTCount++;
-              }
+        if (responded) {
+          respondedCount++;
+          if (isCorrect) {
+            correctCount++;
+          } else {
+            incorrectResponses++;
           }
+          if (typeof trial.rt === 'number' && trial.rt >= 0) {
+            totalRT += trial.rt;
+            validRTCount++;
+          }
+        }
       }
+
+      // Suma dobrych naciśnięć i naciśnięć przed znakiem (falstartów)
+      let totalClicks = respondedCount;
 
       // Obliczenia (RT w ms)
       let sredniCzasReakcji = validRTCount > 0 ? Math.round((totalRT / validRTCount) * 1000) : 0;
@@ -798,34 +818,37 @@ async function quitPsychoJS(message, isCompleted) {
 
       // Budujemy paczkę dla Launchera
       let payload = {
-          testId: expInfo['expName'] || "Test Reakcji STOP",
-          subjectId: expInfo['participant'],
-          timestamp: new Date().toISOString(),
+        testId: expInfo['expName'] || "Test Reakcji STOP",
+        subjectId: expInfo['participant'],
+        timestamp: new Date().toISOString(),
 
-          // Standaryzowane pola Nous
-          ilosc_poprawnych_nacisniec: correctCount,
-          ilosc_blednych_nacisniec: incorrectResponses,
-          ogolna_ilosc_nacisniec: respondedCount,
-          sredni_czas_reakcji: sredniCzasReakcji,
+        // Standaryzowane pola Nous
+        ilosc_poprawnych_nacisniec: correctCount,
+        ilosc_blednych_nacisniec: incorrectResponses,
+        ogolna_ilosc_nacisniec: respondedCount,
+        sredni_czas_reakcji: sredniCzasReakcji,
+        totalClicks: totalClicks,
 
-          // Pole zachowane dla kompatybilności
-          czas_reakcji: sredniCzasReakcji,
+        // Pole zachowane dla kompatybilności
+        czas_reakcji: sredniCzasReakcji,
 
-          // Ujednolicony format score
-          score: `Poprawne: ${correctCount} | Błędne: ${incorrectResponses} | Łącznie: ${respondedCount} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
+        // Ujednolicony format score
+        score: `Poprawne: ${correctCount} | Błędne: ${incorrectResponses} | Łącznie: ${respondedCount} | Kliknięcia: ${totalClicks} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
 
-          // Statystyki szczegółowe
-          statystyki: {
-              sredni_czas_ms: sredniCzasReakcji,
-              poprawne_reakcje: correctCount,
-              wszystkie_proby: totalTrials,
-              skutecznosc: accuracy,
-              reakcje: respondedCount,
-              bledne_reakcje: incorrectResponses
-          },
+        // Statystyki szczegółowe
+        statystyki: {
+          sredni_czas_ms: sredniCzasReakcji,
+          poprawne_reakcje: correctCount,
+          wszystkie_proby: totalTrials,
+          skutecznosc: accuracy,
+          reakcje: respondedCount,
+          bledne_reakcje: incorrectResponses,
+          totalClicks: totalClicks,
+          falstarty: allData.filter(t => !!t.isFalstart).length
+        },
 
-          // Pełne dane (każda próba)
-          wyniki: allData
+        // Pełne dane (każda próba)
+        wyniki: allData
       };
 
       console.log("Wysyłanie danych do Launchera...", payload);
@@ -838,7 +861,7 @@ async function quitPsychoJS(message, isCompleted) {
     console.log("Tryb przeglądarki - standardowy zapis CSV.");
   }
   psychoJS.window.close();
-  psychoJS.quit({message: message, isCompleted: isCompleted});
-  
+  psychoJS.quit({ message: message, isCompleted: isCompleted });
+
   return Scheduler.Event.QUIT;
 }

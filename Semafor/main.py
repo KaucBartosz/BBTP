@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
 N = 8
-TRIAL_TIMEOUT_SEC = 10.0
+TRIAL_TIMEOUT_SEC = 5.0
 FEEDBACK_TIME = 0.5
 N_TRIALS = 20
 

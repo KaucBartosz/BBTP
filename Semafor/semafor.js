@@ -686,8 +686,8 @@ function trialRoutineEachFrame() {
       continueRoutine = false;
     }
     
-    // limit 10 s bez reakcji
-    if (trialClock.getTime() >= 10.0 && clicked_x === null) {
+    // limit  5s bez reakcji
+    if (trialClock.getTime() >= 5.0 && clicked_x === null) {
       continueRoutine = false;
     }
     
