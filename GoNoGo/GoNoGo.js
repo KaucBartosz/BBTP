@@ -53,6 +53,9 @@ flowScheduler.add(instructionsRoutineEnd());
 flowScheduler.add(DifficultyRoutineBegin());
 flowScheduler.add(DifficultyRoutineEachFrame());
 flowScheduler.add(DifficultyRoutineEnd());
+flowScheduler.add(LengthRoutineBegin());
+flowScheduler.add(LengthRoutineEachFrame());
+flowScheduler.add(LengthRoutineEnd());
 const trialsLoopScheduler = new Scheduler(psychoJS);
 flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
 flowScheduler.add(trialsLoopScheduler);
@@ -151,6 +154,19 @@ async function experimentInit() {
   });
   
   key_diff = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
+
+  // --- INICJALIZACJA WYBORU DŁUGOŚCI ---
+  LengthClock = new util.Clock();
+  text_len = new visual.TextStim({
+    win: psychoJS.window,
+    name: 'text_len',
+    text: 'Wybierz długość testu:\n\n1 - KRÓTKI (10 prób)\n2 - ŚREDNI (30 prób)\n3 - DŁUGI (60 prób)\n\nNaciśnij 1, 2 lub 3.',
+    font: 'Arial',
+    pos: [0, 0], height: 0.05,  wrapWidth: undefined, ori: 0.0,
+    color: new util.Color('white'),  opacity: undefined,
+    depth: 0.0 
+  });
+  key_len = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
   // --- NOUS INTEGRATION: INIT ---
   if (typeof window.electronTest !== 'undefined') {
@@ -254,8 +270,6 @@ var instructionsMaxDuration;
 var instructionsComponents;
 function instructionsRoutineBegin(snapshot) {
   return async function () {
-    TrialHandler.fromSnapshot(snapshot); // ensure that .thisN vals are up to date
-    
     //--- Prepare to start Routine 'instructions' ---
     t = 0;
     frameN = -1;
@@ -384,12 +398,9 @@ function instructionsRoutineEnd(snapshot) {
     // the Routine "instructions" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
-    // Routines running outside a loop should always advance the datafile row
-    if (currentLoop === psychoJS.experiment) {
-      psychoJS.experiment.nextEntry(snapshot);
-    }
     return Scheduler.Event.NEXT;
   }
+
 }
 
 
@@ -399,8 +410,6 @@ var DifficultyMaxDuration;
 var DifficultyComponents;
 function DifficultyRoutineBegin(snapshot) {
   return async function () {
-    TrialHandler.fromSnapshot(snapshot); // ensure that .thisN vals are up to date
-    
     //--- Prepare to start Routine 'Difficulty' ---
     t = 0;
     frameN = -1;
@@ -511,6 +520,132 @@ function DifficultyRoutineEachFrame() {
 }
 
 
+
+var LengthComponents;
+var LengthClock;
+var text_len;
+var key_len;
+var _key_len_allKeys;
+var LengthMaxDurationReached;
+var LengthMaxDuration;
+
+function LengthRoutineBegin(snapshot) {
+  return async function () {
+    //--- Prepare to start Routine 'Length' ---
+    t = 0;
+    frameN = -1;
+    continueRoutine = true; 
+    routineForceEnded = false;
+    LengthClock.reset();
+    routineTimer.reset();
+    LengthMaxDurationReached = false;
+    
+    key_len.keys = undefined;
+    key_len.rt = undefined;
+    _key_len_allKeys = [];
+    psychoJS.experiment.addData('Length.started', globalClock.getTime());
+    LengthMaxDuration = null;
+    LengthComponents = [];
+    LengthComponents.push(text_len);
+    LengthComponents.push(key_len);
+    
+    for (const thisComponent of LengthComponents)
+      if ('status' in thisComponent)
+        thisComponent.status = PsychoJS.Status.NOT_STARTED;
+    return Scheduler.Event.NEXT;
+  }
+}
+
+function LengthRoutineEachFrame() {
+  return async function () {
+    t = LengthClock.getTime();
+    frameN = frameN + 1;
+    
+    if (t >= 0.0 && text_len.status === PsychoJS.Status.NOT_STARTED) {
+      text_len.tStart = t;  
+      text_len.frameNStart = frameN;  
+      text_len.setAutoDraw(true);
+    }
+    
+    if (t >= 0.0 && key_len.status === PsychoJS.Status.NOT_STARTED) {
+      key_len.tStart = t;  
+      key_len.frameNStart = frameN;  
+      psychoJS.window.callOnFlip(function() { key_len.clock.reset(); });  
+      psychoJS.window.callOnFlip(function() { key_len.start(); }); 
+      psychoJS.window.callOnFlip(function() { key_len.clearEvents(); });
+    }
+    
+    if (key_len.status === PsychoJS.Status.STARTED) {
+      let theseKeys = key_len.getKeys({keyList: ['1','2','3'], waitRelease: false});
+      _key_len_allKeys = _key_len_allKeys.concat(theseKeys);
+      if (_key_len_allKeys.length > 0) {
+        key_len.keys = _key_len_allKeys[_key_len_allKeys.length - 1].name;  
+        key_len.rt = _key_len_allKeys[_key_len_allKeys.length - 1].rt;
+        key_len.duration = _key_len_allKeys[_key_len_allKeys.length - 1].duration;
+        continueRoutine = false;
+      }
+    }
+    
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({keyList:['escape']}).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
+    
+    if (!continueRoutine) {  
+      routineForceEnded = true;
+      return Scheduler.Event.NEXT;
+    }
+    
+    continueRoutine = false;  
+    for (const thisComponent of LengthComponents)
+      if ('status' in thisComponent && thisComponent.status !== PsychoJS.Status.FINISHED) {
+        continueRoutine = true;
+        break;
+      }
+    
+    if (continueRoutine) {
+      return Scheduler.Event.FLIP_REPEAT;
+    } else {
+      return Scheduler.Event.NEXT;
+    }
+  };
+}
+
+function LengthRoutineEnd(snapshot) {
+  return async function () {
+    for (const thisComponent of LengthComponents) {
+      if (typeof thisComponent.setAutoDraw === 'function') {
+        thisComponent.setAutoDraw(false);
+      }
+    }
+    psychoJS.experiment.addData('Length.stopped', globalClock.getTime());
+    key_len.stop();
+    
+    let choice = '1'; 
+    if (typeof key_len !== 'undefined' && key_len.keys) {
+        if (Array.isArray(key_len.keys)) {
+            choice = key_len.keys[0]; 
+        } else {
+            choice = key_len.keys;
+        }
+    }
+    
+    if (choice === '1') {
+        window.testLength = 10;
+    } else if (choice === '2') {
+        window.testLength = 30;
+    } else if (choice === '3') {
+        window.testLength = 60;
+    } else {
+        window.testLength = 10;
+    }
+    
+    console.log('Wybrano dlugosc: ' + window.testLength);
+    psychoJS.experiment.addData('test_length_setting', window.testLength);
+    routineTimer.reset();
+    
+    return Scheduler.Event.NEXT;
+  }
+}
 var choice;
 function DifficultyRoutineEnd(snapshot) {
   return async function () {
@@ -577,10 +712,6 @@ function DifficultyRoutineEnd(snapshot) {
     // the Routine "Difficulty" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
-    // Routines running outside a loop should always advance the datafile row
-    if (currentLoop === psychoJS.experiment) {
-      psychoJS.experiment.nextEntry(snapshot);
-    }
     return Scheduler.Event.NEXT;
   }
 }
@@ -589,12 +720,12 @@ function DifficultyRoutineEnd(snapshot) {
 var trials;
 function trialsLoopBegin(trialsLoopScheduler, snapshot) {
   return async function() {
-    TrialHandler.fromSnapshot(snapshot); // update internal variables (.thisN etc) of the loop
+    // update internal variables (.thisN etc) of the loop
     
     // set up handler to look after randomisation of conditions etc
     trials = new TrialHandler({
       psychoJS: psychoJS,
-      nReps: 10, method: TrialHandler.Method.RANDOM,
+      nReps: window.testLength || 10, method: TrialHandler.Method.RANDOM,
       extraInfo: expInfo, originPath: undefined,
       trialList: undefined,
       seed: undefined, name: 'trials'
@@ -949,7 +1080,7 @@ function feedbackRoutineBegin(snapshot) {
       feedbackMaxDurationReached = false;
       // update component parameters for each repeat
       // Bez feedbacku – wyświetlamy tylko "..." w szarym kolorze
-      feedbackStim.setColor(new util.Color('gray'));
+      feedbackStim.setColor(new util.Color('darkgrey'));
       feedbackStim.setText('...');
       psychoJS.experiment.addData('feedback.started', globalClock.getTime());
       feedbackMaxDuration = null
@@ -1188,3 +1319,5 @@ async function quitPsychoJS(message, isCompleted) {
 
   return Scheduler.Event.QUIT;
 }
+
+

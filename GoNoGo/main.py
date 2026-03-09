@@ -81,16 +81,35 @@ def main():
         return
     decision_time, difficulty_name = DIFFICULTY_MAP.get(keyname, (1.0, 'Normalny (1.0s)'))
 
+    # --- Wybór długości ---
+    len_text = visual.TextStim(
+        win,
+        text='Wybierz długość testu:\n\n1 - KRÓTKI (10 prób)\n2 - ŚREDNI (30 prób)\n3 - DŁUGI (60 prób)\n\nNaciśnij 1, 2 lub 3.',
+        color='white', height=0.05, wrapWidth=1.8, alignText='center',
+    )
+    len_text.draw()
+    win.flip()
+    keys = event.waitKeys(keyList=['1', '2', '3', 'escape'])
+    keyname = keys[0] if keys else None
+    if keyname == 'escape':
+        win.close()
+        if NOUS_LAUNCHER:
+            _write_results(SCRIPT_DIR, [], 0, 0, 0, 0, score_text='')
+        return
+    
+    length_map = {'1': 10, '2': 30, '3': 60}
+    n_trials = length_map.get(keyname, 10) if not NOUS_TRAINING else 5
+
     # Komponenty próby
     number_stim = visual.TextStim(win, text='', color='white', height=0.15, alignText='center')
-    feedback_stim = visual.TextStim(win, text='...', color='gray', height=0.15, alignText='center')
+    feedback_stim = visual.TextStim(win, text='...', color='darkgrey', height=0.15, alignText='center')
     mouse = event.Mouse(win=win)
     mouse.setVisible(True)
 
     trials_data = []
     escaped = False
 
-    for trial_idx in range(N_TRIALS):
+    for trial_idx in range(n_trials):
         num = random.randint(0, 9)
         current_number = str(num)
         is_go = (num % 2) == 0
@@ -135,7 +154,7 @@ def main():
 
         # Feedback – bez informacji o poprawności (szare "...")
         feedback_stim.setText('...')
-        feedback_stim.setColor('gray')
+        feedback_stim.setColor('darkgrey')
         feedback_stim.draw()
         win.flip()
         core.wait(1.5)
