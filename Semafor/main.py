@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
 N = 8
-TRIAL_TIMEOUT_SEC = 5.0
+TRIAL_TIMEOUT_SEC = 15.0
 FEEDBACK_TIME = 0.5
 N_TRIALS = 20
 
@@ -229,14 +229,16 @@ def main():
     # Wyniki
     ilosc_klikniec_ogolem = sum(1 for t in trials_data if t['clicked_x'] is not None)
     poprawne_trafienia = sum(1 for t in trials_data if t['correct'] == 1)
-    bledne_trafienia = max(0, ilosc_klikniec_ogolem - poprawne_trafienia)
-    accuracy = round((poprawne_trafienia / ilosc_klikniec_ogolem) * 100) if ilosc_klikniec_ogolem else 0
+    no_answer = sum(1 for t in trials_data if t['clicked_x'] is None)
+    bledne_trafienia = max(0, ilosc_klikniec_ogolem - poprawne_trafienia) + no_answer
+    total_trials = ilosc_klikniec_ogolem + no_answer
+    accuracy = round((poprawne_trafienia / total_trials) * 100) if total_trials else 0
 
     if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy)
+        _write_results(SCRIPT_DIR, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer)
 
 
-def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy):
+def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer):
     results = {
         'testId': 'semafor',
         'subjectId': f'{random.randint(0, 999999):06d}',
@@ -244,11 +246,13 @@ def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia
         'ilosc_poprawnych_nacisniec': poprawne_trafienia,
         'ilosc_blednych_nacisniec': bledne_trafienia,
         'ogolna_ilosc_nacisniec': ilosc_klikniec_ogolem,
-        'score': f'Kliknięć: {ilosc_klikniec_ogolem} | Poprawne: {poprawne_trafienia} | Błędne: {bledne_trafienia} | Skuteczność: {accuracy}%',
+        'noAnserw': no_answer,
+        'score': f'Kliknięć: {ilosc_klikniec_ogolem} | Poprawne: {poprawne_trafienia} | Błędne (w tym brak odp.): {bledne_trafienia} | Brak odp.: {no_answer} | Skuteczność: {accuracy}%',
         'statystyki': {
             'poprawne': poprawne_trafienia,
             'bledne': bledne_trafienia,
             'wszystkie_kliki': ilosc_klikniec_ogolem,
+            'brak_odpowiedzi': no_answer,
             'proby': len(trials_data),
             'skutecznosc_proc': accuracy,
         },
