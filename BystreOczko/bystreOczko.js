@@ -136,8 +136,8 @@ async function experimentInit() {
     depth: 0.0
   });
 
-  key_resp = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
-  
+  key_resp = new core.Keyboard({ psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true });
+
   // Initialize components for Routine "selection"
   selectionClock = new util.Clock();
   selectionText = new visual.TextStim({
@@ -147,7 +147,7 @@ async function experimentInit() {
     font: 'Arial',
     pos: [0, 0], height: 0.05, color: new util.Color('white')
   });
-  selectionKB = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
+  selectionKB = new core.Keyboard({ psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true });
   window.testLength = 10;
 
   // Initialize components for Routine "trial"
@@ -414,14 +414,14 @@ function selectionRoutineEachFrame() {
       selectionKB.clearEvents();
     }
     if (selectionKB.status === PsychoJS.Status.STARTED) {
-      let theseKeys = selectionKB.getKeys({keyList: ['1', '2', '3'], waitRelease: false});
+      let theseKeys = selectionKB.getKeys({ keyList: ['1', '2', '3'], waitRelease: false });
       _selectionKB_allKeys = _selectionKB_allKeys.concat(theseKeys);
       if (_selectionKB_allKeys.length > 0) {
         selectionKB.keys = _selectionKB_allKeys[_selectionKB_allKeys.length - 1].name;
         continueRoutine = false;
       }
     }
-    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({keyList:['escape']}).length > 0) {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
       return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
     }
     if (!continueRoutine) return Scheduler.Event.NEXT;
@@ -444,7 +444,7 @@ function selectionRoutineEnd(snapshot) {
     if (choice === '1') window.testLength = 10;
     else if (choice === '2') window.testLength = 30;
     else if (choice === '3') window.testLength = 60;
-    
+
     psychoJS.experiment.addData('test_length', window.testLength);
     selectionKB.stop();
     routineTimer.reset();
@@ -623,7 +623,14 @@ function trialRoutineEachFrame() {
       window.responded = true;
       window.rt = REACTION_TIME_LIMIT_SEC;  // czas reakcji = limit
       window.correct = 0;
-      continueRoutine = false;
+
+      // Unified reaction: all lights to syg.png
+      for (let rr = 0; rr < window.ROWS; rr++) {
+        for (let cc = 0; cc < window.COLS; cc++) {
+          window.lights[rr][cc].setImage('resources/syg.png');
+        }
+      }
+      window.feedbackClock.reset();
     }
 
     if (window.green_is_on && !window.responded && isNewClick) {
@@ -635,7 +642,14 @@ function trialRoutineEachFrame() {
             window.clicked_col = c;
             window.rt = window.rtClock.getTime();
             window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-            continueRoutine = false;
+
+            // Unified reaction: all lights to syg.png
+            for (let rr = 0; rr < window.ROWS; rr++) {
+              for (let cc = 0; cc < window.COLS; cc++) {
+                window.lights[rr][cc].setImage('resources/syg.png');
+              }
+            }
+            window.feedbackClock.reset();
             break;
           }
         }
@@ -652,7 +666,14 @@ function trialRoutineEachFrame() {
             window.clicked_col = c;
             window.rt = window.rtClock.getTime();
             window.correct = (r === window.target_row && c === window.target_col) ? 1 : 0;
-            continueRoutine = false;
+
+            // Unified reaction: all lights to syg.png
+            for (let rr = 0; rr < window.ROWS; rr++) {
+              for (let cc = 0; cc < window.COLS; cc++) {
+                window.lights[rr][cc].setImage('resources/syg.png');
+              }
+            }
+            window.feedbackClock.reset();
             break;
           }
         }
@@ -667,9 +688,9 @@ function trialRoutineEachFrame() {
       window._touchPsychoY = null;
     }
 
-    // 4. Koniec próby (usunięto feedbackTime)
-    if (window.responded) {
-        continueRoutine = false;
+    // 4. Koniec próby po odpowiednim czasie feedbacku
+    if (window.responded && window.feedbackClock.getTime() >= window.feedbackTime) {
+      continueRoutine = false;
     }
     // *mouse* updates
     if (t >= 0.0 && mouse.status === PsychoJS.Status.NOT_STARTED) {

@@ -204,7 +204,13 @@ def main():
             win.flip()
 
         # Brak core.wait(FEEDBACK_TIME) - przechodzimy dalej natychmiast opcjonalnym win.flip() do czyszczenia
+        # Unified reaction: all lights to syg.png
+        for r in range(ROWS):
+            for c in range(COLS):
+                lights[r][c].setImage(str(RESOURCES / 'syg.png'))
+                lights[r][c].draw()
         win.flip()
+        core.wait(FEEDBACK_TIME)
 
         trials_data.append({
             'greenOnset': green_onset,
