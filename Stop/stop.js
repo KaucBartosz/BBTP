@@ -389,7 +389,7 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
     // set up handler to look after randomisation of conditions etc
     trials = new TrialHandler({
       psychoJS: psychoJS,
-      nReps: 10, method: TrialHandler.Method.RANDOM,
+      nReps: 50, method: TrialHandler.Method.RANDOM,
       extraInfo: expInfo, originPath: undefined,
       trialList: undefined,
       seed: undefined, name: 'trials'
@@ -453,6 +453,7 @@ var stopClock;
 var rt;
 var responded;
 var correct;
+var isFalstart;
 var car_start_x;
 var car_y;
 var car_speed;
@@ -660,7 +661,7 @@ function driveRoutineEachFrame() {
     if (!stop_visible && !responded) {
       let buttons_down = mouse.getPressed();
       let touch_down = window._touchJustStarted && window._touchPsychoX != null && window._touchCanvas;
-      
+
       if (buttons_down[0] || buttons_down[1] || buttons_down[2] || keys.length > 0 || touch_down) {
         responded = true;
         correct = 0;

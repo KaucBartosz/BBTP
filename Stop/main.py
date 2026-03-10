@@ -18,7 +18,7 @@ NOUS_TRAINING = os.environ.get('NOUS_TRAINING') == '1'
 SCRIPT_DIR = Path(__file__).resolve().parent
 RESOURCES = SCRIPT_DIR / 'resources'
 
-N_TRIALS = 10 if not NOUS_TRAINING else 5
+N_TRIALS = 50 if not NOUS_TRAINING else 5
 CAR_Y = -0.3
 CAR_X = 0.25 # Zaktualizowana pozycja (zgodnie z manualną poprawką użytkownika w JS)
 
