@@ -54,9 +54,8 @@ def main():
 
     # Ekran wyboru długości testu
     selection_text = (
-        "TEST STROOPA\n\n"
-        "Zadanie polega na określeniu KOLORU czcionki wyświetlanego słowa,\n"
-        "ignorując jego treść (np. słowo 'NIEBIESKI' napisane na czerwono -> odpowiedź to Czerwony).\n\n"
+        "Za chwilę na ekranie pojawiać się będą kolejno słowa zapisane kolorową czcionką. "
+        "Twoim zadaniem jest zareagowanie na KOLOR czcionki i ignorowanie treści słowa. "
         "Używaj klawiszy numerycznych:\n"
         "1 - Czerwony\n2 - Niebieski\n3 - Zielony\n4 - Żółty\n\n"
         "Wybierz długość testu:\n"
@@ -158,17 +157,21 @@ def main():
     win.close()
 
     # Statystyki
-    correct_count = sum(t['correct'] for t in trials_data)
-    total = len(trials_data)
-    incorrect_count = total - correct_count
     responded = [t for t in trials_data if t.get('responded') and t['rt'] is not None]
-    avg_rt = round(sum(t['rt'] for t in responded) / len(responded)) if responded else 0
-    accuracy = round((correct_count / total) * 100) if total else 0
+    poprawne_nacisniecia = sum(t['correct'] for t in responded)
+    wszystkie_nacisniecia = len(responded)
+    bledne_nacisniecia = wszystkie_nacisniecia - poprawne_nacisniecia
     
-    score_text = f'Poprawne: {correct_count} | Błędne: {incorrect_count} | Śr. RT: {avg_rt} ms | Skuteczność: {accuracy}%'
+    total_proby = len(trials_data)
+    pominiete = total_proby - wszystkie_nacisniecia
+    
+    avg_rt = round(sum(t['rt'] for t in responded) / len(responded)) if responded else 0
+    accuracy = round((poprawne_nacisniecia / total_proby) * 100) if total_proby else 0
+    
+    score_text = f'Poprawne: {poprawne_nacisniecia} | Błędne: {bledne_nacisniecia} | Pominięte: {pominiete} | Śr. RT: {avg_rt} ms | Skuteczność: {accuracy}%'
 
     if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, trials_data, correct_count, incorrect_count, total, avg_rt, n_questions, score_text=score_text)
+        _write_results(SCRIPT_DIR, trials_data, poprawne_nacisniecia, bledne_nacisniecia, wszystkie_nacisniecia, avg_rt, n_questions, score_text=score_text)
 
 if __name__ == '__main__':
     main()

@@ -127,7 +127,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Przed tobą pojawi się plansza z sygnalizatorami. W losowym interwale czasu jeden z nich zapali się na zielono. Twoim zadaniem jest naciśnięcie na sygnalizator z zielonym światłem. Powodzenia!',
+    text: 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,
@@ -825,8 +825,8 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_blednych_nacisniec: wrongCount,
         ilosc_brakow_nacisniec: noResponseCount,
         ogolna_ilosc_nacisniec: totalClicks,
+        ilosc_obiektow_do_klikniecia: nTrials,
         sredni_czas_reakcji: avgRTms,
-        czas_reakcji: avgRTms,
         score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Braki: ${noResponseCount} | Śr. RT: ${avgRTms} ms`,
         wyniki: allData
       });

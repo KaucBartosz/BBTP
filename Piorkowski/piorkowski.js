@@ -172,7 +172,7 @@ async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
     name: 'welcomeText',
-    text: 'Test Aparatu Piórkowskiego\n\nNa ekranie będzie pojawiać się czerwone kółko.\nTwoim zadaniem jest jak najszybsze kliknięcie na samochód, gdy kółko się pojawi.\n\nNaciśnij SPACJĘ lub dotknij ekranu, aby rozpocząć.',
+    text: 'Na ekranie w krótkich odstępach czasu pojawiać się będzie czerwone kółko. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na samochód za każdym razem, gdy pojawi się nowe kółko. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: 'height', 
     pos: [0, 0], draggable: false, height: 0.05,  wrapWidth: 1.2, ori: 0.0,
@@ -908,7 +908,6 @@ async function quitPsychoJS(message, isCompleted) {
               ilosc_blednych_nacisniec: window.missCount,
               ogolna_ilosc_nacisniec: totalCircles,
               sredni_czas_reakcji: avgRT,
-              czas_reakcji: avgRT,
               klikniecia_bez_kolka: window.clicksWithoutCircle,
               score: `Poprawne: ${window.correctCount} | Misses: ${window.missCount} | Bez kółka: ${window.clicksWithoutCircle} | Łącznie: ${totalCircles} | Śr. RT: ${avgRT} ms`,
               wyniki: window.trialResults

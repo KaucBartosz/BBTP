@@ -136,7 +136,7 @@ async function experimentInit() {
   selectionText = new visual.TextStim({
     win: psychoJS.window,
     name: 'selectionText',
-    text: 'TEST STROOPA\n\nOkreśl KOLOR czcionki (ignoruj treść słowa).\nUżywaj klawiszy: 1-Czerwony, 2-Niebieski, 3-Zielony, 4-Żółty\n\nWybierz długość testu:\n1 - 10 pytań\n2 - 20 pytań\n3 - 30 pytań\n\nESC - Wyjście',
+    text: 'Za chwilę na ekranie pojawiać się będą kolejno słowa zapisane kolorową czcionką. Twoim zadaniem jest zareagowanie na KOLOR czcionki i ignorowanie treści słowa.\n\nUżywaj klawiszy: 1-Czerwony, 2-Niebieski, 3-Zielony, 4-Żółty\n\nWybierz długość testu:\n1 - 10 pytań\n2 - 20 pytań\n3 - 30 pytań\n\nESC - Wyjście',
     font: 'Arial',
     pos: [0, 0],
     height: 0.04,
@@ -424,24 +424,27 @@ async function quitPsychoJS(message, isCompleted) {
 
   if (typeof window.electronTest !== 'undefined') {
     if (isCompleted && trials_data.length > 0) {
-      let correct = trials_data.filter(t => t.correct === 1).length;
-      let total = trials_data.length;
       let responded = trials_data.filter(t => t.responded && t.rt !== null);
-      let avgRT = responded.length > 0
-        ? Math.round(responded.reduce((acc, t) => acc + t.rt, 0) / responded.length)
+      let correct = responded.filter(t => t.correct === 1).length;
+      let presses = responded.length;
+      let errors = presses - correct;
+      let total_trials = trials_data.length;
+      
+      let avgRT = presses > 0
+        ? Math.round(responded.reduce((acc, t) => acc + t.rt, 0) / presses)
         : 0;
-      let accuracy = Math.round((correct / total) * 100);
+      let accuracy = Math.round((correct / total_trials) * 100);
 
       window.electronTest.sendResults({
         testId: expName,
         subjectId: expInfo['participant'],
         timestamp: new Date().toISOString(),
         ilosc_poprawnych_nacisniec: correct,
-        ilosc_blednych_nacisniec: total - correct,
-        ogolna_ilosc_nacisniec: total,
+        ilosc_blednych_nacisniec: errors,
+        ogolna_ilosc_nacisniec: presses,
         sredni_czas_reakcji: avgRT,
         poziom_trudnosci: `${n_questions} pytań`,
-        score: `Poprawne: ${correct} | Błędne: ${total - correct} | Śr. RT: ${avgRT} ms | Skuteczność: ${accuracy}%`,
+        score: `Poprawne: ${correct} | Błędne: ${errors} | Pominięte: ${total_trials - presses} | Śr. RT: ${avgRT} ms | Skuteczność: ${accuracy}%`,
         wyniki: trials_data
       });
     } else {

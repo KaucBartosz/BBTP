@@ -38,7 +38,7 @@ psychoJS.openWindow({
   color: new util.Color([0, 0, 0]),
   units: 'height',
   waitBlanking: true,
-  backgroundImage: 'C:/Users/Bartosz/Desktop/Pavlovia/ReakcjaSTOP/resources/tlo.png',
+  backgroundImage: 'resources/tlo.png',
   backgroundFit: 'fill',
 });
 // schedule the experiment:
@@ -130,7 +130,7 @@ async function experimentInit() {
   text = new visual.TextStim({
     win: psychoJS.window,
     name: 'text',
-    text: 'Witaj!\n\nNa ekranie znajduje się samochód.\nTwoim zadaniem jest go zatrzymać, gdy zobaczysz znak STOP.\n\nAby to zrobić, naciśnij na samochód lub naciśnij klawisz SPACJA.\n\nNaciśnij SPACJĘ, aby rozpocząć.\n',
+    text: 'Twoim zadaniem będzie wcisnąć SPACJĘ, za każdym razem, gdy na ekranie pojawi się znak STOP. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: undefined, ori: 0.0,

@@ -65,10 +65,7 @@ def main():
     # Instrukcja
     instr = visual.TextStim(
         win,
-        text='Witaj!\n\nNa ekranie znajduje się samochód.\n'
-             'Twoim zadaniem jest go zatrzymać, gdy zobaczysz znak STOP.\n\n'
-             'Aby to zrobić, naciśnij na samochód lub naciśnij klawisz SPACJA.\n\n'
-             'Naciśnij SPACJĘ, aby rozpocząć.',
+        text='Twoim zadaniem będzie wcisnąć SPACJĘ, za każdym razem, gdy na ekranie pojawi się znak STOP. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
         color='white', height=0.05, wrapWidth=1.5, alignText='center',
     )
     instr.draw()

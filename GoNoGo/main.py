@@ -49,9 +49,7 @@ def main():
     # --- Instrukcja ---
     instr = visual.TextStim(
         win,
-        text='Witaj w teście Go/NoGo!\n\nTwoim zadaniem jest reagowanie na liczby:\n\n'
-             'PARZYSTE (0, 2, 4, 6, 8)\n-> Naciśnij SPACJĘ (Szybko!)\n\n'
-             'NIEPARZYSTE (1, 3, 5, 7, 9)\n-> Nic nie rób (Czekaj)\n\n\nNaciśnij SPACJĘ, aby rozpocząć.',
+        text='Za chwilę na ekranie będą pojawiać się kolejno cyfry. Twoim zadaniem jest wcisnąć SPACJĘ, gdy pokazywana cyfra będzie PARZYSTA i powstrzymać się od reakcji, gdy cyfra będzie NIEPARZYSTA. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
         color='white', height=0.05, wrapWidth=1.8, alignText='center',
     )
     instr.draw()

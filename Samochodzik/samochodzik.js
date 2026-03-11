@@ -47,7 +47,7 @@ document.addEventListener('keyup', (e) => activeKeys.delete(e.key));
 async function experimentInit() {
     welcomeText = new visual.TextStim({
         win: psychoJS.window,
-        text: "SAMOCHODZIK\n\nCEL: Dojedź do czerwonego pola mety.\nSTEROWANIE: Strzałki klawiatury.\n\nNaciśnij SPACJĘ, aby wybrać trasę",
+        text: "Twoim zadaniem będzie przejechanie labiryntu. Za pomocą strzałek na klawiaturze, pokieruj samochodem do mety. Staraj się dokładnie kierować samochodem, aby nie wyjechać poza krawędź labiryntu. Wyjechanie poza krawędź spowoduje powrót samochodu na start. Naciśnij SPACJĘ aby wybrać trasę.",
         color: new util.Color('white'), height: 0.04
     });
 
