@@ -123,19 +123,22 @@ def main():
         fullscr=True,
         units='height',
         color=(0, 0, 0),
-        allowGUI=False,
     )
+    win.mouseVisible = True
     mouse = event.Mouse(win=win)
     mouse.setVisible(True)
 
     # ================= WELCOME SCREEN =================
+    instr_text = (
+        "Za chwilę na ekranie zobaczysz serię różnych figur. Za pomocą MYSZY, klikaj na te figury, "
+        "których kształt i kolor odpowiada wzorcowi przedstawionemu u góry ekranu. "
+        "Wzorzec, co jakiś czas będzie się zmieniał. Zawsze należy klikać na te figury, "
+        "których kształt i kolor odpowiada aktualnemu wzorcowi. "
+        "Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ."
+    )
     instr = visual.TextStim(
         win,
-        text=('Na górze ekranu wyświetlane są dwie figury – cele.\n'
-              'Na dole ekranu przesuwają się figury w dwóch rzędach.\n\n'
-              'Twoim zadaniem jest klikać w figury pasujące do celów.\n'
-              'Cele zmieniają się co pewien czas.\n\n'
-              'Naciśnij SPACJĘ, aby przejść dalej.'),
+        text=instr_text,
         color='white', height=0.045, wrapWidth=1.6, alignText='center',
     )
     instr.draw()
@@ -204,6 +207,7 @@ def main():
     chosen_duration = dur_map.get(keyname, DURATION_OPTIONS[0])
 
     # ================= SETUP =================
+
     X_STEP = SIZE_BOTTOM + GAP
     X_START = -((N_PER_ROW - 1) / 2) * X_STEP
     WRAP_DISTANCE = N_PER_ROW * X_STEP
@@ -413,6 +417,7 @@ def main():
     obiekty_do_klikniecia = target_appearances
     accuracy = round((poprawne_trafienia / total_presses) * 100) if total_presses else 0
     detection_rate = round((poprawne_trafienia / obiekty_do_klikniecia) * 100) if obiekty_do_klikniecia else 0
+
 
     if NOUS_LAUNCHER:
         _write_results(SCRIPT_DIR, clicked_records, poprawne_trafienia,

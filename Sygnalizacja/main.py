@@ -54,8 +54,7 @@ def main():
 
     instr = visual.TextStim(
         win,
-        text='Witaj!\n\nW tym teście wybierz auto, które ma zielone światło.\n'
-             'Masz 3 sekundy na reakcję.\n\nWyboru dokonujesz klawiszami A / ← (lewe auto) lub D / → (prawe auto).\n\nNaciśnij SPACJĘ, aby rozpocząć.',
+        text='Za chwilę zobaczysz dwa samochody i dwie sygnalizacje świetlne. Za pomocą strzałek na klawiaturze lub przycisków A (prawo)/D (lewo), wskaż ten z samochodów, przy którym z sygnalizacja zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
         color='white', height=0.05, wrapWidth=1.8, alignText='center',
     )
     instr.draw()

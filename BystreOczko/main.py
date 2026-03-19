@@ -23,11 +23,7 @@ REACTION_TIME_LIMIT_SEC = 3.0  # limit czasu na reakcję po zapaleniu zielonego 
 FEEDBACK_TIME = 0.5
 N_TRIALS = 5 if NOUS_TRAINING else 10
 
-INSTRUCTION = (
-    'Przed tobą pojawi się plansza z sygnalizatorami. W losowym interwale czasu '
-    'jeden z nich zapali się na zielono. Twoim zadaniem jest naciśnięcie na sygnalizator '
-    'z zielonym światłem. Powodzenia!'
-)
+INSTRUCTION = 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.'
 
 
 def _write_results(script_dir, trials_data, correct_count, wrong_count, no_response_count, total_clicks, avg_rt_ms):
@@ -40,8 +36,8 @@ def _write_results(script_dir, trials_data, correct_count, wrong_count, no_respo
         'ilosc_blednych_nacisniec': wrong_count,
         'ilosc_brakow_nacisniec': no_response_count,
         'ogolna_ilosc_nacisniec': total_clicks,
+        'ilosc_obiektow_do_klikniecia': n_trials,
         'sredni_czas_reakcji': avg_rt_ms,
-        'czas_reakcji': avg_rt_ms,
         'score': f'Poprawne: {correct_count} | Błędne: {wrong_count} | Braki: {no_response_count} | Śr. RT: {avg_rt_ms} ms',
         'wyniki': trials_data,
     }

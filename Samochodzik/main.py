@@ -25,11 +25,7 @@ MAP_ASPECT = 0.555
 CAR_SIZE = (0.03, 0.05)
 
 INSTRUCTION = (
-    'TEST NAWIGACJI SAMOCHODZIKIEM\n\n'
-    'CEL: Dojedź do czerwonego pola mety.\n'
-    'STEROWANIE: Strzałki klawiatury.\n\n'
-    'Naciśnij SPACJĘ aby wybrać trasę\n'
-    'Naciśnij ESC aby wyjść'
+    'Twoim zadaniem będzie przejechanie labiryntu. Za pomocą strzałek na klawiaturze, pokieruj samochodem do mety. Staraj się dokładnie kierować samochodem, aby nie wyjechać poza krawędź labiryntu. Wyjechanie poza krawędź spowoduje powrót samochodu na start. Naciśnij SPACJĘ aby wybrać trasę.'
 )
 
 DIFFICULTY_TXT = (
@@ -44,7 +40,7 @@ def _write_results(script_dir, trials_data, collision_count, duration, difficult
         'testId': 'samochodzik',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'difficulty': difficulty,
+        'poziom_trudnosci': difficulty,
         'ilosc_poprawnych_nacisniec': 1 if duration > 0 else 0,
         'ilosc_blednych_nacisniec': collision_count,
         'ogolna_ilosc_nacisniec': (1 if duration > 0 else 0) + collision_count,

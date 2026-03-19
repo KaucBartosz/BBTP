@@ -292,11 +292,7 @@ function welcomeRoutineBegin() {
 
     welcomeText = new visual.TextStim({
       win: psychoJS.window,
-      text: 'Na górze ekranu wyświetlane są dwie figury – cele.\n'
-        + 'Na dole ekranu przesuwają się figury w dwóch rzędach.\n\n'
-        + 'Twoim zadaniem jest klikać w figury pasujące do celów.\n'
-        + 'Cele zmieniają się co pewien czas.\n\n'
-        + 'Naciśnij SPACJĘ, aby przejść dalej.',
+      text: 'Za chwilę na ekranie zobaczysz serię różnych figur. Za pomocą MYSZY, klikaj na te figury, których kształt i kolor odpowiada wzorcowi przedstawionemu u góry ekranu. Wzorzec, co jakiś czas będzie się zmieniał. Zawsze należy klikać na te figury, których kształt i kolor odpowiada aktualnemu wzorcowi. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
       font: 'Arial',
       pos: [0, 0], height: 0.045, wrapWidth: 1.6,
       color: new util.Color('white'),

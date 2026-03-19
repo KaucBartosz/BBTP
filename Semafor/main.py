@@ -24,9 +24,7 @@ FEEDBACK_TIME = 0.5
 N_TRIALS = 20
 
 INSTRUCTION = (
-    'Zapalają się dwie zielone lampki i naszym celem jest naciśnięcie na czerwoną lampkę '
-    'na przecięciu ich prostych, tak jak na prawdziwym semaforze.\n\n'
-    'Naciśnij SPACJĘ, aby rozpocząć.'
+    'Za chwilę zobaczysz planszę z lampkami. Twoim zadaniem będzie, za pomocą MYSZY, wskazać tę lampkę, która znajduje się na przecięciu prostych dwóch lampek zapalonych na zielono. Staraj się klikać najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.'
 )
 
 CORNER_COORDS = [(0, 0), (0, N-1), (N-1, 0), (N-1, N-1)]
@@ -235,10 +233,13 @@ def main():
     accuracy = round((poprawne_trafienia / total_trials) * 100) if total_trials else 0
 
     if NOUS_LAUNCHER:
-        _write_results(SCRIPT_DIR, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer)
+        # Liczenie średniego RT
+        rts = [t['rt'] for t in trials_data if t.get('rt') is not None]
+        avg_rt = round((sum(rts) / len(rts)) * 1000) if rts else 0
+        _write_results(SCRIPT_DIR, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer, avg_rt)
 
 
-def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer):
+def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia, ilosc_klikniec_ogolem, accuracy, no_answer, avg_rt):
     results = {
         'testId': 'semafor',
         'subjectId': f'{random.randint(0, 999999):06d}',
@@ -246,8 +247,11 @@ def _write_results(script_dir, trials_data, poprawne_trafienia, bledne_trafienia
         'ilosc_poprawnych_nacisniec': poprawne_trafienia,
         'ilosc_blednych_nacisniec': bledne_trafienia,
         'ogolna_ilosc_nacisniec': ilosc_klikniec_ogolem,
+        'ilosc_brakow_nacisniec': no_answer,
         'noAnserw': no_answer,
-        'score': f'Kliknięć: {ilosc_klikniec_ogolem} | Poprawne: {poprawne_trafienia} | Błędne (w tym brak odp.): {bledne_trafienia} | Brak odp.: {no_answer} | Skuteczność: {accuracy}%',
+        'sredni_czas_reakcji': avg_rt,
+        'score': f'Kliknięć: {ilosc_klikniec_ogolem} | Poprawne: {poprawne_trafienia} | Błędne (w tym brak odp.): {bledne_trafienia} | Brak odp.: {no_answer} | Skuteczność: {accuracy}% | Śr. RT: {avg_rt} ms',
+
         'statystyki': {
             'poprawne': poprawne_trafienia,
             'bledne': bledne_trafienia,

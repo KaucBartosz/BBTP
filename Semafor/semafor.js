@@ -120,7 +120,7 @@ async function experimentInit() {
   welcomeText = new visual.TextStim({
     win: psychoJS.window,
     name: 'welcomeText',
-    text: 'Zapalają się dwie zielone lampki i naszym celem jest naciśnięcie na czerwoną lampkę na przecięciu ich prostych, tak jak na prawdziwym semaforze.\n\nNaciśnij SPACJĘ, aby rozpocząć.',
+    text: 'Za chwilę zobaczysz planszę z lampkami. Twoim zadaniem będzie, za pomocą MYSZY, wskazać tę lampkę, która znajduje się na przecięciu prostych dwóch lampek zapalonych na zielono. Staraj się klikać najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
     font: 'Arial',
     units: undefined,
     pos: [0, 0], draggable: false, height: 0.05, wrapWidth: 1.8, ori: 0.0,
@@ -810,14 +810,21 @@ async function quitPsychoJS(message, isCompleted) {
       let iloscKlikniecOgolem = 0;
       let noAnserw = 0;
 
+      let sumRT = 0;
+      let validRTCount = 0;
       for (let trial of allData) {
         if (trial.clicked_x != null && trial.clicked_y != null) {
           iloscKlikniecOgolem++;
           if (trial.correct === 1) poprawneTrafienia++;
+          if (typeof trial.rt === 'number' && trial.rt >= 0) {
+            sumRT += trial.rt;
+            validRTCount++;
+          }
         } else {
           noAnserw++;
         }
       }
+      let sredniCzasReakcji = validRTCount > 0 ? Math.round((sumRT / validRTCount) * 1000) : 0;
       let bledneTrafienia = Math.max(0, iloscKlikniecOgolem - poprawneTrafienia) + noAnserw;
       let totalTrials = iloscKlikniecOgolem + noAnserw;
       let accuracy = totalTrials > 0 ? Math.round((poprawneTrafienia / totalTrials) * 100) : 0;
@@ -829,8 +836,10 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_poprawnych_nacisniec: poprawneTrafienia,
         ilosc_blednych_nacisniec: bledneTrafienia,
         ogolna_ilosc_nacisniec: iloscKlikniecOgolem,
+        ilosc_brakow_nacisniec: noAnserw,
         noAnserw: noAnserw,
-        score: `Kliknięć: ${iloscKlikniecOgolem} | Poprawne: ${poprawneTrafienia} | Błędne (w tym brak odp.): ${bledneTrafienia} | Brak odp.: ${noAnserw} | Skuteczność: ${accuracy}%`,
+        sredni_czas_reakcji: sredniCzasReakcji,
+        score: `Kliknięć: ${iloscKlikniecOgolem} | Poprawne: ${poprawneTrafienia} | Błędne (w tym brak odp.): ${bledneTrafienia} | Brak odp.: ${noAnserw} | Skuteczność: ${accuracy}% | Śr. RT: ${sredniCzasReakcji} ms`,
         statystyki: {
           poprawne: poprawneTrafienia,
           bledne: bledneTrafienia,

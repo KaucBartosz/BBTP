@@ -27,12 +27,7 @@ CIRCLE_SIZE = 0.15  # Rozmiar kółka w jednostkach height
 DURATION_OPTIONS = [30, 60, 90, 120]
 DEFAULT_DURATION = 60
 
-INSTRUCTION = (
-    'Test Aparatu Piórkowskiego\n\n'
-    'Na ekranie będzie pojawiać się czerwone kółko.\n'
-    'Twoim zadaniem jest jak najszybsze kliknięcie na samochód, gdy kółko się pojawi.\n\n'
-    'Naciśnij SPACJĘ lub dotknij ekranu, aby rozpocząć.'
-)
+INSTRUCTION = 'Na ekranie w krótkich odstępach czasu pojawiać się będzie czerwone kółko. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na samochód za każdym razem, gdy pojawi się nowe kółko. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.'
 
 DURATION_SELECTION_TEXT = (
     'Wybierz czas trwania testu:\n\n'
@@ -52,7 +47,6 @@ def _write_results(script_dir, trials_data, correct_count, miss_count, total_cir
         'ilosc_blednych_nacisniec': miss_count,
         'ogolna_ilosc_nacisniec': total_circles,
         'sredni_czas_reakcji': avg_rt_ms,
-        'czas_reakcji': avg_rt_ms,
         'klikniecia_bez_kolka': clicks_without_circle,
         'score': f'Poprawne: {correct_count} | Misses: {miss_count} | Bez kółka: {clicks_without_circle} | Łącznie: {total_circles} | Śr. RT: {avg_rt_ms} ms',
         'wyniki': trials_data,
