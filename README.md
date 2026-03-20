@@ -1,2 +1,2 @@
 # BBTP
-Baza testów psychologicnzych do programu Nous
+Baza testów psychometrycznych do programu Nous
