@@ -166,4 +166,62 @@ This project uses Code Index MCP for intelligent code indexing and search. Use t
 - **Smart processing** batches rapid changes to prevent excessive rebuilds
 - No manual intervention needed - cache and indexing are managed automatically
 
+## PsychoJS Testy — WYMAGANIA
+
+Przy tworzeniu nowych testów psychometrycznych w PsychoJS, MUSISZ spełnić następujące wymagania:
+
+### index.html
+Każdy test MUSI mieć `index.html` z dokładnie taką strukturą (kopiuj z istniejących działających testów):
+```html
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>NazwaTestu [PsychoPy]</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-ui-dist@1.12.1/jquery-ui.min.css">
+    <link rel="stylesheet" href="./lib/psychojs-2025.1.1.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-ui-dist@1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/preloadjs@1.0.1/lib/preloadjs.min.js"></script>
+    <script src="./nazwatestu.js" type="module"></script>
+    <script src="./lib/psychojs-2025.1.1.iife.js" nomodule></script>
+  </body>
+</html>
+```
+
+**WAŻNE**: Brak CDN linków (jQuery, jQuery UI, PreloadJS) lub `<div id="root">` spowoduje czarny/biały ekran!
+
+### Struktura plików
+```
+NazwaTestu/
+├── index.html          # Z CDN linkami (PATRZ WYŻEJ)
+├── nazwatestu.js       # Główny plik JS (wzoruj na GoNoGo.js)
+├── main.py             # Wersja Python (HPM)
+└── lib/                # Biblioteki PsychoJS (kopiuj z BystreOczko/lib/)
+    ├── psychojs-2025.1.1.css
+    ├── psychojs-2025.1.1.iife.js
+    ├── psychojs-2025.1.1.js
+    └── ...
+```
+
+### Kod JavaScript
+Wzoruj się na **GoNoGo.js** lub **Stroop/stroop.js**:
+- Każda routine ma `Begin/EachFrame/End` functions
+- Components array z proper status tracking (`NOT_STARTED` → `STARTED` → `FINISHED`)
+- `continueRoutine` properly managed w eachFrame
+- Keyboard z `callOnFlip` dla clock reset, start, clearEvents
+- Mouse z proper initialization
+- `psychoJS.experiment.save = function() { return Promise.resolve(); }` dla Nous integration
+
+### NIGDY NIE RÓB
+- NIE twórz minimalistycznego index.html bez CDN linków
+- NIE używaj `visual.Polygon` - używaj `visual.Rect` (bardziej niezawodne)
+- NIE pomijaj `<div id="root"></div>` w body
+- NIE pomijaj CSS link
+- NIE twórz kodu od zera - kopiuje strukturę z działających testów
+
 <!-- gitnexus:end -->
