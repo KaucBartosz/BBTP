@@ -3,6 +3,7 @@
 ## 1. Architektura Nous
 
 **Nous** (v1.1.8) to launcher (Electron) do badań psychologicznych i klinicznych:
+
 - Zarządza biblioteką testów z GitHub (paczki ZIP)
 - Obsługuje metryczki badanych (demografię)
 - Przechowuje wyniki: IndexedDB lokalnie + synchronizacja Firebase
@@ -10,6 +11,7 @@
 ### Rodzaje testów
 
 #### A. Testy Webowe (JS/HTML) – Standardowe
+
 - **Plik startowy**: `index.html` (w głównym folderze lub podfolderze)
 - **Komunikacja**: `window.electronTest` (bridge)
 - **Zakończenie**: `window.electronTest.sendResults(data)` – zapis wyników
@@ -17,6 +19,7 @@
 - Uruchamiane w pełnoekranowym oknie Electrona
 
 #### B. Testy Natywne (HPM - High Precision Mode) – Python
+
 - **Plik startowy**: `main.py`
 - **Zmienne środowiskowe**:
   - `NOUS_LAUNCHER='1'` – informacja, że test działa pod kontrolą Nous
@@ -32,7 +35,8 @@
 
 Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 
-### Główne pola (używane w podsumowaniu zaraz po teście):
+### Główne pola (używane w podsumowaniu zaraz po teście)
+
 ```javascript
 {
   "testId": "nazwa_testu",              // string, bez spacji
@@ -45,13 +49,15 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 }
 ```
 
-### Dodatkowe pola (opcjonalne, widoczne w pliku wynikowym):
+### Dodatkowe pola (opcjonalne, widoczne w pliku wynikowym)
+
 - `score`: tekst podsumowania (np. `"Poprawne: 5 | Błędne: 3 | Skuteczność: 62%"`)
 - `statystyki`: obiekt ze szczegółowymi statystykami
 - `wyniki`: surowe dane prób (lista obiektów)
 - `poziom_trudnosci`: dla testów z wyborem poziomu (GoNoGo, PingPong, Samochodzik itp.)
 
 **WAŻNE:**
+
 - Jeśli test **NIE mierzy czasu reakcji**, **NIE umieszczaj** `sredni_czas_reakcji` w wynikach
 - Jeśli test mierzy RT, zawsze licz średni RT dla **wszystkich odpowiedzi** (poprawnych i błędnych), chyba że specyfika testu wymaga inaczej
 - Niektóre testy mają dodatkowe pola specyficzne dla testu – to jest dopuszczalne (patrz sekcja 10)
@@ -61,12 +67,14 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 ## 3. Checklista dla Nowych/Przeglądanych Testów
 
 ### Integracja z Nous (JS)
+
 - [ ] Sprawdzenie `window.electronTest` przed zapisem CSV: `psychoJS.experiment.save = function() { return Promise.resolve(); }`
 - [ ] ESC = wyjście bez zapisu: `if (!isCompleted) window.electronTest.close()`
 - [ ] Normalne zakończenie: `window.electronTest.sendResults({...})` z ujednoliconymi polami
 - [ ] Filtrowanie `_trialsData`: tylko wiersze z `typeof t.correct !== 'undefined'` (pomijamy welcome)
 
 ### Integracja z Nous (Python)
+
 - [ ] Sprawdzenie `NOUS_LAUNCHER` i `NOUS_TRAINING` z `os.environ`
 - [ ] ESC na ekranie instrukcji: zapis pustych wyników jeśli `NOUS_LAUNCHER`
 - [ ] ESC w trakcie prób: flaga `escaped`, przerwanie zewnętrznej pętli
@@ -76,17 +84,20 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 - [ ] **NIE używać** `gui.Dlg` ani `core.quit()` – zakłócają integrację z Nous (patrz: problem PingPong)
 
 ### Nazewnictwo wyników
+
 - [ ] `ilosc_poprawnych_nacisniec` (nie: trafień, kliknięć, odpowiedzi)
 - [ ] `ilosc_blednych_nacisniec` (nie: błędów, pomyłek)
 - [ ] `ogolna_ilosc_nacisniec` (nie: wszystkie_kliki, total_clicks)
 - [ ] `sredni_czas_reakcji` tylko jeśli test mierzy RT
 
 ### Ekran wprowadzający
+
 - [ ] Tekst instrukcji wyjaśniający zadanie
 - [ ] Wyjście przez ESC (bez zapisu lub pusty wynik)
 - [ ] Kontynuacja przez klawisz (spacja/Enter)
 
 ### Obsługa ekranu dotykowego (JS)
+
 - [ ] Pobranie canvas: `psychoJS.window._renderer.view` lub `document.querySelector('canvas')`
 - [ ] Event listeners: `touchstart`, `touchend`, `touchmove` z `preventDefault()`
 - [ ] Konwersja współrzędnych: `touchToPsycho(clientX, clientY)` → jednostki PsychoJS
@@ -94,6 +105,7 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 - [ ] Czyszczenie stanu dotyku po obsłużeniu (`_touchJustStarted = false`)
 
 ### Inne
+
 - [ ] Usunięcie referencji do legacy scripts z `index.html`
 - [ ] Brak zduplikowanego kodu (np. podwójne sprawdzanie ESC)
 - [ ] Poprawne liczenie statystyk (np. średni RT dla wszystkich odpowiedzi, nie tylko poprawnych)
@@ -103,8 +115,10 @@ Wszystkie testy muszą zwracać te same pola w `sendResults()` / `results.json`:
 ## 4. Typowe Problemy i Rozwiązania
 
 ### Problem: Zafałszowana średnia RT / liczba prób
+
 **Przyczyna**: `_trialsData` zawiera wiersz z rutyny welcome (bez `correct`)
 **Rozwiązanie**: Filtrowanie przed pętlą wyników:
+
 ```javascript
 let allData = (psychoJS.experiment._trialsData || []).filter(
   function (t) { return typeof t.correct !== 'undefined'; }
@@ -112,16 +126,20 @@ let allData = (psychoJS.experiment._trialsData || []).filter(
 ```
 
 ### Problem: W testach Python (PsychoPy) nie widać kursora myszy
+
 **Przyczyna**: W pełnym ekranie z `allowGUI=False` PsychoPy na niektórych systemach domyślnie ukrywa kursor.
 **Rozwiązanie**: Zaraz po utworzeniu obiektu myszy wywołać `mouse.setVisible(True)`:
+
 ```python
 mouse = event.Mouse(win=win)
 mouse.setVisible(True)
 ```
 
 ### Problem: ESC nie przerywa całej serii prób
+
 **Przyczyna**: `break` tylko w wewnętrznej pętli `while`
 **Rozwiązanie**: Flaga `escaped`, sprawdzenie po zakończeniu próby:
+
 ```python
 escaped = False
 for trial_idx in range(N_TRIALS):
@@ -135,23 +153,29 @@ for trial_idx in range(N_TRIALS):
 ```
 
 ### Problem: Dotyk nie działa
+
 **Przyczyna**: Brak konwersji współrzędnych lub błędne sprawdzanie `contains`
-**Rozwiązanie**: 
+**Rozwiązanie**:
+
 - Konwersja `touchToPsycho()` z aspect ratio
 - Funkcja `pointInStim()` z zabezpieczeniem na `pos`/`size`
 - Sprawdzanie `opacity > 0` przed hit-testem
 
 ### Problem: Niezgodne nazwy wyników
+
 **Przyczyna**: Różne testy używają różnych nazw
 **Rozwiązanie**: Zawsze używać:
+
 - `ilosc_poprawnych_nacisniec`
 - `ilosc_blednych_nacisniec`
 - `ogolna_ilosc_nacisniec`
 - `sredni_czas_reakcji` (tylko jeśli mierzy RT)
 
 ### Problem: Test Python nie zapisuje wyników do Nous
+
 **Przyczyna**: Użycie `gui.Dlg` lub `core.quit()` powoduje zamknięcie procesu przed zapisem
 **Rozwiązanie**:
+
 - Zastąp `gui.Dlg` ekranami `visual.TextStim` z `event.waitKeys()`
 - Zastąp `core.quit()` wyjściem przez `return` z funkcji `main()`
 - Upewnij się, że `_write_results()` jest wywoływane **przed** `win.close()`
@@ -159,6 +183,7 @@ for trial_idx in range(N_TRIALS):
 - **Poprawna struktura**: `if NOUS_LAUNCHER: _write_results(...); win.close(); return`
 
 ### Problem: HPM nie startuje testu / wyniki się nie pokazują
+
 **Przyczyna**: Launcher uruchamia `main.py` i czeka na `results.json` po zamknięciu procesu. Jeśli `core.quit()` jest wywoływane zamiast naturalnego powrotu, plik może nie zostać zapisany.
 **Rozwiązanie**: Upewnij się, że kod Pythona zawsze zapisuje `results.json` przed zakończeniem, gdy `NOUS_LAUNCHER == True`.
 
@@ -167,6 +192,7 @@ for trial_idx in range(N_TRIALS):
 ## 5. Przykłady Poprawnego Kodu
 
 ### JS: quitPsychoJS z ujednoliconymi polami
+
 ```javascript
 async function quitPsychoJS(message, isCompleted) {
   if (psychoJS.experiment.isEntryEmpty()) {
@@ -216,6 +242,7 @@ async function quitPsychoJS(message, isCompleted) {
 ```
 
 ### Python: main.py z Nous HPM (wzorcowy szablon)
+
 ```python
 import os
 import json
@@ -279,6 +306,7 @@ if __name__ == '__main__':
 ```
 
 ### JS: Obsługa dotyku
+
 ```javascript
 // W experimentInit:
 window._touchJustStarted = false;
@@ -361,11 +389,13 @@ NazwaTestu/
 ## 7. Tryb Treningowy
 
 ### Python (HPM)
+
 - Sprawdzanie: `NOUS_TRAINING = os.environ.get('NOUS_TRAINING') == '1'`
 - Można użyć do zmniejszenia liczby prób (np. 5 zamiast 10)
 - Przykład: `N_TRIALS = 10 if not NOUS_TRAINING else 5`
 
 ### JS (Standard)
+
 - **Obecnie**: Tryb treningowy jest obsługiwany przez launcher **po zakończeniu testu**
 - Launcher sprawdza `isTraining` i blokuje zapis do bazy
 - Test JS **nie otrzymuje** informacji o trybie treningowym
@@ -390,6 +420,7 @@ NazwaTestu/
 ## 9. Przykładowe Zadania
 
 ### "Przeanalizuj test X i popraw..."
+
 1. Przeczytaj główny plik JS/Python
 2. Sprawdź `quitPsychoJS` / `_write_results` pod kątem nazewnictwa
 3. Sprawdź obsługę ESC
@@ -398,11 +429,13 @@ NazwaTestu/
 6. Wprowadź poprawki zgodnie z checklistą
 
 ### "Dodaj obsługę ekranu dotykowego"
+
 1. W `experimentInit`: pobierz canvas, dodaj touch listeners
 2. W `trialRoutineEachFrame`: dodaj funkcję `pointInStim` i blok obsługi dotyku
 3. Pamiętaj o czyszczeniu stanu dotyku po obsłużeniu
 
 ### "Stwórz wersję Python/PsychoPy"
+
 1. Skopiuj logikę z JS do Pythona
 2. Użyj `psychopy.visual`, `psychopy.core`, `psychopy.event`
 3. Dodaj `NOUS_LAUNCHER` i `NOUS_TRAINING` z `os.environ`
@@ -413,6 +446,7 @@ NazwaTestu/
 8. **NIE używaj** `gui.Dlg` (dialog GUI) ani `core.quit()` – użyj `visual.TextStim` + `event.waitKeys()` i `return`
 
 ### "Napraw integrację testu Python z Nous"
+
 1. Usuń wszystkie wywołania `core.quit()` – zastąp `return` lub naturalnym końcem `main()`
 2. Usuń `gui.Dlg` – zastąp ekranami tekstowymi
 3. Dodaj `NOUS_LAUNCHER` i `NOUS_TRAINING` jeśli ich brakuje
@@ -436,7 +470,8 @@ NazwaTestu/
 | **Piórkowski** | JS + HPM (Python) | ✅ tak | ❌ | Kółka losowo; kliknięcie w auto; `klikniecia_bez_kolka`; wybór czasu trwania |
 | **PingPong** | JS + HPM (Python) | ❌ nie | ❌ | Odbijanie piłki 2 paletkami; `ilosc_poprawnych_nacisniec` = odbicia paletką, `ilosc_blednych_nacisniec` = przepuszczone; `poziom_trudnosci`; tryb Trudny ma progresję prędkości |
 
-### Uwagi o specyficznych polach wynikowych:
+### Uwagi o specyficznych polach wynikowych
+
 - **Samochodzik**: `ilosc_poprawnych_nacisniec` = 1 jeśli trasa ukończona, `ilosc_blednych_nacisniec` = liczba kolizji, `czas_pokonania_trasy_sek` = czas przejazdu
 - **Piórkowski**: `ogolna_ilosc_nacisniec` = łączna liczba kółek (trafione + pominięte), `klikniecia_bez_kolka` = kliknięcia bez aktywnego kółka
 - **GoNoGo**: `ogolna_ilosc_nacisniec` = liczba naciśnięć spacji (nie łączna liczba prób), `poziom_trudnosci` = nazwa wybranego poziomu
@@ -461,5 +496,5 @@ Silnik HPM zawiera skompilowane środowisko Python z następującymi bibliotekam
 
 ---
 
-**Ostatnia aktualizacja**: 2026-02-26
-**Wersja Nous**: 1.1.8
+**Ostatnia aktualizacja**: 2026-03-21
+**Wersja Nous**: 1.2.0
