@@ -116,6 +116,7 @@ def main():
         number_stim.draw()
         win.flip()
 
+        event.clearEvents()
         clock = core.Clock()
         pressed = False
         rt_sec = None
@@ -163,9 +164,9 @@ def main():
     if not NOUS_LAUNCHER:
         return
 
-    wszystkie = sum(1 for t in trials_data if t.get('pressed'))
-    poprawne = sum(1 for t in trials_data if t.get('pressed') and t.get('was_correct'))
-    bledne = max(0, wszystkie - poprawne)
+    wszystkie = len(trials_data)
+    poprawne = sum(1 for t in trials_data if t.get('was_correct'))
+    bledne = wszystkie - poprawne
     rts = [t['rt'] for t in trials_data if t.get('rt') is not None and t['rt'] >= 0]
     avg_rt_ms = round((sum(rts) / len(rts)) * 1000) if rts else 0
     accuracy = round((poprawne / len(trials_data)) * 100) if trials_data else 0
