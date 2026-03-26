@@ -27,7 +27,7 @@ CIRCLE_SIZE = 0.15  # Rozmiar kółka w jednostkach height
 DURATION_OPTIONS = [30, 60, 90, 120]
 DEFAULT_DURATION = 60
 
-INSTRUCTION = 'Na ekranie w krótkich odstępach czasu pojawiać się będzie czerwone kółko. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na samochód za każdym razem, gdy pojawi się nowe kółko. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.'
+INSTRUCTION = 'Na ekranie w krótkich odstępach czasu pojawiać się będzie czerwone kółko. \nTwoim zadaniem jest, za pomocą MYSZY, kliknąć na samochód za każdym razem, gdy pojawi się nowe kółko. \nStaraj się reagować najszybciej jak potrafisz. \nAby rozpocząć zadanie, wciśnij SPACJĘ.'
 
 DURATION_SELECTION_TEXT = (
     'Wybierz czas trwania testu:\n\n'
@@ -170,7 +170,7 @@ def main():
         # Jeśli gracz puścił przycisk, zaczynamy liczyć czas do kolejnego kółka
         if waiting_for_release and not is_pressed_now:
             waiting_for_release = False
-            next_circle_time = t + TIME_BETWEEN_CIRCLES * (0.4 + random.random() * 1.2)
+            next_circle_time = t + TIME_BETWEEN_CIRCLES
 
         # Sprawdzenie timeoutu dla widocznego kółka (miss)
         if current_circle is not None and not responded:
@@ -184,7 +184,7 @@ def main():
                 })
                 current_circle = None
                 # Po missie od razu odliczamy do następnego kółka
-                next_circle_time = t + TIME_BETWEEN_CIRCLES * (0.4 + random.random() * 1.2)
+                next_circle_time = t + TIME_BETWEEN_CIRCLES
 
         # Tworzenie nowego kółka
         if current_circle is None and not waiting_for_release and t >= next_circle_time:
