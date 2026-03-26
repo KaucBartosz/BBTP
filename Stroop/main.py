@@ -82,8 +82,8 @@ def main():
     fixation = visual.TextStim(win, text='+', color='white', height=0.05)
     stim_text = visual.TextStim(win, text='', height=0.1, bold=True)
     
-    # Podpowiedź klawiszy na dole
-    hint_y = -0.4
+    # Podpowiedź klawiszy na górze
+    hint_y = 0.4
     hints = [
         visual.TextStim(win, text=COLOR_MAP[n]['label'], color=COLOR_MAP[n]['color'], 
                         pos=((i*0.4)-0.6, hint_y), height=0.03)
