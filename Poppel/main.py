@@ -254,6 +254,7 @@ def main():
             'imgName': img_file,
             'clicked': False,
             'counted': False,
+            'drained': False,
             'x': x,
             'y': y,
         })
@@ -267,6 +268,9 @@ def main():
     clicked_records = []
     last_change_time = 0.0
     target_change_flash_time = -1.0
+    game_phase = 'RUNNING'  # 'RUNNING' | 'DRAINING'
+    drain_mode = 'CHANGE'   # 'CHANGE' | 'END'
+    drained_count = 0
     prev_pressed = mouse.getPressed()
     hit_box_half = (SIZE_BOTTOM * 1.3) / 2
 
@@ -292,7 +296,7 @@ def main():
 
     # ================= MAIN LOOP =================
     frame_clock.reset()
-    while trial_clock.getTime() < chosen_duration:
+    while True:
         if event.getKeys(keyList=['escape']):
             escaped = True
             break
@@ -347,17 +351,29 @@ def main():
                 b['counted'] = True
 
             if new_x > X_START + WRAP_DISTANCE:
-                # Track missed targets
-                if not b['clicked'] and b['counted'] and b['imgName'] in targets:
+                # Track missed targets (only if not already drained)
+                if not b['drained'] and not b['clicked'] and b['counted'] and b['imgName'] in targets:
                     missed_targets += 1
 
-                new_x -= WRAP_DISTANCE
-                next_img = bottom_sequence.pop(0) if bottom_sequence else random.choice(active_pool)
-                b['stim'].setImage(str(RESOURCES / next_img))
-                b['imgName'] = next_img
-                b['clicked'] = False
-                b['counted'] = False
-                b['stim'].opacity = 1.0
+                if game_phase == 'DRAINING':
+                    if not b['drained']:
+                        b['stim'].opacity = 0.0
+                        b['imgName'] = '__blank__'
+                        b['clicked'] = True
+                        b['counted'] = True
+                        b['drained'] = True
+                        drained_count += 1
+                    # Park far off-screen to prevent re-wrap during drain
+                    new_x = -10.0
+                else:
+                    new_x -= WRAP_DISTANCE
+                    next_img = bottom_sequence.pop(0) if bottom_sequence else random.choice(active_pool)
+                    b['stim'].setImage(str(RESOURCES / next_img))
+                    b['imgName'] = next_img
+                    b['clicked'] = False
+                    b['counted'] = False
+                    b['drained'] = False
+                    b['stim'].opacity = 1.0
 
             b['x'] = new_x
             prev_x[i] = new_x
@@ -365,32 +381,64 @@ def main():
             if b['stim'].opacity > 0:
                 b['stim'].draw()
 
-        # --- Target change every 20s ---
-        if elapsed - last_change_time >= TARGET_CHANGE_INTERVAL and elapsed > 1:
-            targets = safe_sample(active_pool, N_TARGETS)
-            for j, t in enumerate(top_stims):
-                t['stim'].setImage(str(RESOURCES / targets[j]))
-                t['imgName'] = targets[j]
-            injection = make_sequence_with_target_ratio(active_pool, targets, 20)
-            bottom_sequence = injection + bottom_sequence
+        # --- Check drain completion ---
+        if game_phase == 'DRAINING' and drained_count >= len(bottom_stims):
+            if drain_mode == 'END':
+                break  # screen is empty – exit cleanly
+            else:
+                targets = safe_sample(active_pool, N_TARGETS)
+                for j, t_s in enumerate(top_stims):
+                    t_s['stim'].setImage(str(RESOURCES / targets[j]))
+                    t_s['imgName'] = targets[j]
+                target_change_flash_time = elapsed
+                last_change_time = elapsed
 
-            # Replace off-screen (left side) figures with new targets immediately
-            for b in bottom_stims:
-                if b['x'] < APPEAR_X and not b['clicked']:
-                    new_img = random.choice(targets)
-                    b['stim'].setImage(str(RESOURCES / new_img))
-                    b['imgName'] = new_img
+                # Rebuild sequence for remaining duration
+                remaining = max(chosen_duration - elapsed + 10, 60)
+                items = int(active_speed / X_STEP * remaining) + N_PER_ROW * 2
+                bottom_sequence = make_sequence_with_target_ratio(active_pool, targets, max(items, 60))
+
+                # Re-spawn all stims from off-screen left
+                for i, b in enumerate(bottom_stims):
+                    col = i % N_PER_ROW
+                    row = i // N_PER_ROW
+                    standard_x = X_START + col * X_STEP
+                    spawn_x = standard_x - 1.8
+                    y = ROW1_Y if row == 0 else ROW2_Y
+                    next_img = bottom_sequence.pop(0)
+                    b['stim'].setImage(str(RESOURCES / next_img))
+                    b['imgName'] = next_img
                     b['clicked'] = False
                     b['counted'] = False
+                    b['drained'] = False
                     b['stim'].opacity = 1.0
+                    b['stim'].pos = (spawn_x, y)
+                    b['x'] = spawn_x
+                    prev_x[i] = spawn_x
 
-            # Visual flash
-            target_change_flash_time = elapsed
+                drained_count = 0
+                game_phase = 'RUNNING'
 
-            last_change_time = elapsed
+        # --- Enter DRAINING when target change time arrives ---
+        if game_phase == 'RUNNING' and elapsed - last_change_time >= TARGET_CHANGE_INTERVAL and elapsed > 1:
+            game_phase = 'DRAINING'
+            drain_mode = 'CHANGE'
+            drained_count = 0
+            for b in bottom_stims:
+                b['drained'] = False
+            bottom_sequence = []  # clear – nothing new spawns during drain
 
-        # Replenish
-        if len(bottom_sequence) < 30:
+        # --- End-of-test drain ---
+        if elapsed >= chosen_duration and game_phase == 'RUNNING':
+            game_phase = 'DRAINING'
+            drain_mode = 'END'
+            drained_count = 0
+            for b in bottom_stims:
+                b['drained'] = False
+            bottom_sequence = []
+
+        # Replenish (only during RUNNING phase)
+        if game_phase == 'RUNNING' and len(bottom_sequence) < 30:
             bottom_sequence.extend(
                 make_sequence_with_target_ratio(active_pool, targets, 40)
             )

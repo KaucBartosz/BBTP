@@ -44,7 +44,7 @@ def _write_results(script_dir, trials_data, poprawne, bledne, wszystkie, avg_rt_
 
 
 def main():
-    win = visual.Window(fullscr=True, units='height', color=(0, 0, 0), allowGUI=False)
+    win = visual.Window(fullscr=True, units='height', color='black', allowGUI=False)
 
     # --- Instrukcja ---
     instr = visual.TextStim(

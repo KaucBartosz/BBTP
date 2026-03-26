@@ -95,7 +95,7 @@ def main():
             'PING PONG – Test Koordynacji\n\n'
             'Twoim zadaniem jest odbijanie piłki za pomocą dwóch paletek.\n\n'
             'LEWA PALETKA:  klawisze W (góra) i S (dół)\n'
-            'PRAWA PALETKA: strzałki góra i dół\n\n'
+            'PRAWA PALETKA: strzałki góra i dół lub klawisze O i L\n\n'
             f'Test trwa {TEST_DURATION // 60} minutę/y. Odbijaj piłkę jak najdłużej!\n\n'
             'Naciśnij SPACJĘ, aby wybrać poziom trudności\n'
             'ESC – wyjście bez zapisu'
@@ -229,8 +229,8 @@ def main():
 
         keys_w  = kb.getKeys(['w'],    waitRelease=False, clear=False)
         keys_s  = kb.getKeys(['s'],    waitRelease=False, clear=False)
-        keys_up = kb.getKeys(['up'],   waitRelease=False, clear=False)
-        keys_dn = kb.getKeys(['down'], waitRelease=False, clear=False)
+        keys_up = kb.getKeys(['up', 'o'],   waitRelease=False, clear=False)
+        keys_dn = kb.getKeys(['down', 'l'], waitRelease=False, clear=False)
 
         lp = left_paddle.pos
         rp = right_paddle.pos

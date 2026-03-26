@@ -596,6 +596,8 @@ function trialRoutineBegin(snapshot) {
     window.currentCircle = null;
     window.circleOnsetTime = null;
     window.nextCircleTime = TIME_BETWEEN_CIRCLES;  // Pierwsze kółko po TIME_BETWEEN_CIRCLES sekundach
+    window.waitingForRelease = false;
+    window.circleTimeout = 0;
     window.responded = false;
     window.rt = null;
     window.correctCount = 0;
@@ -651,59 +653,69 @@ function trialRoutineEachFrame() {
         continueRoutine = false;
     }
     
-    // Tworzenie nowego kółka w odpowiednim czasie
-    if (!window.testEnded && currentTime >= window.nextCircleTime) {
-        // Jeśli było poprzednie kółko i nie było reakcji - to miss
+    // Odczyt stanu myszy na początku klatki
+    let buttons = mouse.getPressed();
+    let isPressedNow = (buttons[0] || buttons[1] || buttons[2]);
+    let isNewClick = isPressedNow && !window.prevMouseState;
+    window.prevMouseState = isPressedNow;
+
+    // Jeżeli czekaliśmy na puszczenie przycisku i gracz go puścił:
+    if (window.waitingForRelease && !isPressedNow) {
+        window.waitingForRelease = false;
+        // Zaczynamy liczyć czas do następnego kółka dopiero teraz
+        window.nextCircleTime = currentTime + TIME_BETWEEN_CIRCLES * (0.4 + Math.random() * 1.2);
+    }
+
+    // Logika wyświetlania i wnikania kółek
+    if (!window.testEnded) {
+        // Sprawdzanie timeoutu dla widocznego kółka (miss)
         if (window.currentCircle !== null && !window.responded) {
-            window.missCount++;
-            window.trialResults.push({
-                circleId: window.circleId,
-                correct: 0,
-                miss: 1,
-                rt: null
+            if (currentTime >= window.circleTimeout) {
+                window.missCount++;
+                window.trialResults.push({
+                    circleId: window.circleId,
+                    correct: 0,
+                    miss: 1,
+                    rt: null
+                });
+                window.currentCircle.setAutoDraw(false);
+                window.currentCircle = null; // Ekran jest pusty
+                // Po opuszczeniu kółka od razu odmierzamy czas do następnego
+                window.nextCircleTime = currentTime + TIME_BETWEEN_CIRCLES * (0.4 + Math.random() * 1.2);
+            }
+        }
+
+        // Tworzenie nowego kółka
+        if (window.currentCircle === null && !window.waitingForRelease && currentTime >= window.nextCircleTime) {
+            window.circleId++;
+            let randomX = (Math.random() - 0.5) * 1.0;  // Losowa pozycja X (±0.50, bez obrzeży)
+            let randomY = -0.10 + Math.random() * 0.53;  // Losowa pozycja Y (od -0.10 do 0.43)
+            
+            window.currentCircle = new visual.Polygon({
+                win: psychoJS.window,
+                name: 'circle' + window.circleId,
+                radius: CIRCLE_SIZE / 2,
+                edges: 32,
+                pos: [randomX, randomY],
+                fillColor: new util.Color('red'),
+                lineColor: new util.Color('red'),
+                opacity: 1.0,
+                depth: -1
             });
+            window.currentCircle.setAutoDraw(true);
+            window.circleOnsetTime = currentTime;
+            window.responded = false;
+            window.rt = null;
+            
+            // Czas po jakim kółko znika, jeśli gracz go nie kliknie (stały dla danego kółka ~0.84s)
+            window.circleTimeout = currentTime + TIME_BETWEEN_CIRCLES * 1.5;
         }
-        
-        // Usunięcie starego kółka
-        if (window.currentCircle !== null) {
-            window.currentCircle.setAutoDraw(false);
-        }
-        
-        // Nowe kółko
-        window.circleId++;
-        let randomX = (Math.random() - 0.5) * 1.4;  // Losowa pozycja X (z marginesem)
-        let randomY = (Math.random() - 0.3) * 0.8;  // Losowa pozycja Y (góra ekranu)
-        
-        window.currentCircle = new visual.Polygon({
-            win: psychoJS.window,
-            name: 'circle' + window.circleId,
-            radius: CIRCLE_SIZE / 2,
-            edges: 32,
-            pos: [randomX, randomY],
-            fillColor: new util.Color('red'),
-            lineColor: new util.Color('red'),
-            opacity: 1.0,
-            depth: -1
-        });
-        window.currentCircle.setAutoDraw(true);
-        window.circleOnsetTime = currentTime;
-        window.responded = false;
-        window.rt = null;
-        
-        // Ustawienie czasu następnego kółka
-        window.nextCircleTime = currentTime + TIME_BETWEEN_CIRCLES;
     }
     
     // Rysowanie samochodu
     window.car.draw();
     
-    // Obsługa kliknięcia na samochód
-    let buttons = mouse.getPressed();
-    let isPressedNow = (buttons[0] || buttons[1] || buttons[2]);
-    let isNewClick = isPressedNow && !window.prevMouseState;
-    window.prevMouseState = isPressedNow;
-    
-    // Sprawdzenie kliknięcia myszą
+    // Obsługa poprawnego kliknięcia
     if (window.currentCircle !== null && !window.responded && isNewClick) {
         if (mouse.isPressedIn(window.car)) {
             window.responded = true;
@@ -720,8 +732,10 @@ function trialRoutineEachFrame() {
                 rt: window.rt
             });
             
-            // Ukrycie kółka po poprawnej reakcji
+            // Znikają cel i przechodzimy w tryb oczekiwania na puszczenie
             window.currentCircle.setAutoDraw(false);
+            window.currentCircle = null;
+            window.waitingForRelease = true;
         }
     }
     
@@ -758,6 +772,9 @@ function trialRoutineEachFrame() {
             
             // Ukrycie kółka po poprawnej reakcji
             window.currentCircle.setAutoDraw(false);
+            window.currentCircle = null;
+            window.waitingForRelease = false; // Dotyk == brak przytrzymania w tym modelu
+            window.nextCircleTime = currentTime + TIME_BETWEEN_CIRCLES * (0.4 + Math.random() * 1.2);
         }
         
         window._touchJustStarted = false;

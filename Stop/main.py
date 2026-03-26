@@ -9,6 +9,7 @@ Maksymalny czas reakcji = 5s.
 import os
 import json
 import random
+import math
 from datetime import datetime
 from pathlib import Path
 from psychopy import visual, core, event
@@ -55,10 +56,14 @@ def main():
     tlo_path = RESOURCES / 'tlo.png'
     car_path = RESOURCES / 'car.png'
     stop_path = RESOURCES / 'stop.png'
+    jelonek_path = RESOURCES / 'jelonek.png'
+    drzewo_path = RESOURCES / 'drzewo.png'
     
     if not tlo_path.exists(): tlo_path = SCRIPT_DIR / 'resources' / 'tlo.png'
     if not car_path.exists(): car_path = SCRIPT_DIR / 'resources' / 'car.png'
     if not stop_path.exists(): stop_path = SCRIPT_DIR / 'resources' / 'stop.png'
+    if not jelonek_path.exists(): jelonek_path = SCRIPT_DIR / 'resources' / 'jelonek.png'
+    if not drzewo_path.exists(): drzewo_path = SCRIPT_DIR / 'resources' / 'drzewo.png'
 
     win = visual.Window(fullscr=True, units='height', color=(0, 0, 0), allowGUI=False)
 
@@ -82,6 +87,8 @@ def main():
     tlo = visual.ImageStim(win, image=str(tlo_path), size=(2, 1), pos=(0, 0))
     car = visual.ImageStim(win, image=str(car_path), size=(0.28, 0.28), pos=(CAR_X, CAR_Y))
     stop_sign = visual.ImageStim(win, image=str(stop_path), size=(0.2, 0.2), pos=(0, 0.2))
+    jelonek = visual.ImageStim(win, image=str(jelonek_path), size=(0.15, 0.15), pos=(0, 0))
+    drzewo = visual.ImageStim(win, image=str(drzewo_path), size=(0.2, 0.3), pos=(0, 0))
     mouse = event.Mouse(win=win)
     mouse.setVisible(True)
 
@@ -94,28 +101,67 @@ def main():
         stop_sign.pos = (stop_x, 0.2)
         stop_sign.opacity = 0
 
+        # Setup distractions
+        side1 = -1 if random.random() < 0.5 else 1
+        side2 = -1 if random.random() < 0.5 else 1
+        jelonek.pos = (side1 * (0.78 + random.random() * 0.1), -0.1)
+        drzewo.pos = (side2 * (0.78 + random.random() * 0.1), -0.1)
+        distraction_speed = 0.5 + random.random() * 0.5
+
         trial_clock = core.Clock()
         stop_clock = None
+        global_start = core.getTime()
+        anim_start_time = global_start
+        anim_pause_time = 0
+        anim_is_paused = False
+        last_frame_time = global_start
+        
         responded = False
         rt_sec = None
         correct = 0
         is_falstart = False
+        prev_mouse_pressed = True
+        event.clearEvents()
 
         while trial_clock.getTime() < 10.0: # Ogólny timeout
             t = trial_clock.getTime()
+            current_time = core.getTime()
+            dt = current_time - last_frame_time
+            last_frame_time = current_time
 
             # Pojawienie się STOP
             if not responded and t >= stop_onset and stop_clock is None:
                 stop_sign.opacity = 1
                 stop_clock = core.Clock()
 
-            # Limit czasu 5s od pojawienia się STOP
-            if stop_clock and stop_clock.getTime() >= 5.0:
-                break
+            anim_time = current_time - anim_start_time
+            if anim_is_paused:
+                anim_time = anim_pause_time - anim_start_time
+                
+            car_y_offset = math.sin(anim_time * math.pi * 0.8) * 0.05
+            car.pos = (CAR_X, CAR_Y + car_y_offset)
+            
+            # Distractions motion
+            if not anim_is_paused:
+                jx, jy = jelonek.pos
+                jelonek.pos = (jx, jy - distraction_speed * dt)
+                if jelonek.pos[1] < -0.6:
+                    side1 = -1 if random.random() < 0.5 else 1
+                    jelonek.pos = (side1 * (0.78 + random.random() * 0.1), -0.1)
+                    
+                dx, dy = drzewo.pos
+                drzewo.pos = (dx, dy - distraction_speed * dt)
+                if drzewo.pos[1] < -0.6:
+                    side2 = -1 if random.random() < 0.5 else 1
+                    drzewo.pos = (side2 * (0.78 + random.random() * 0.1), -0.1)
+
+
 
             tlo.draw()
             car.draw()
             stop_sign.draw()
+            jelonek.draw()
+            drzewo.draw()
             win.flip()
 
             # ESC
@@ -125,11 +171,13 @@ def main():
 
             # Reakcja (Mysz lub SPACJA)
             keys = event.getKeys(keyList=['space'])
-            buttons = mouse.getPressed()
+            current_buttons = mouse.getPressed()
+            mouse_just_pressed = any(current_buttons) and not prev_mouse_pressed
+            prev_mouse_pressed = any(current_buttons)
             
             # REAKCJA PRZED ZNAKIEM STOP (Falstart)
             if not stop_sign.opacity and not responded:
-                if any(buttons) or 'space' in keys:
+                if mouse_just_pressed or 'space' in keys:
                     responded = True
                     correct = 0
                     is_falstart = True
@@ -137,11 +185,19 @@ def main():
 
             # POPRAWNA REAKCJA (po pojawieniu się STOP)
             if stop_sign.opacity and not responded:
-                if (any(buttons) and (mouse.isPressedIn(car) or mouse.isPressedIn(stop_sign))) or 'space' in keys:
+                if (mouse_just_pressed and (mouse.isPressedIn(car) or mouse.isPressedIn(stop_sign))) or 'space' in keys:
                     responded = True
                     rt_sec = stop_clock.getTime()
                     correct = 1
-                    break
+                    anim_is_paused = True
+                    anim_pause_time = current_time
+                    
+            if anim_is_paused and (current_time - anim_pause_time >= 1.0):
+                break
+
+            # Limit czasu 5s od pojawienia się STOP
+            if stop_clock and stop_clock.getTime() >= 5.0 and not responded:
+                break
 
         if escaped:
             break

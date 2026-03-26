@@ -144,7 +144,7 @@ async function experimentInit() {
         text: 'PING PONG - Test Koordynacji\n\n' +
               'Twoim zadaniem jest odbijanie piłki za pomocą dwóch paletek.\n\n' +
               'LEWA PALETKA: klawisze W (góra) i S (dół)\n' +
-              'PRAWA PALETKA: strzałki góra i dół\n\n' +
+              'PRAWA PALETKA: strzałki góra i dół lub klawisze O (góra) i L (dół)\n\n' +
               'Test trwa 2 minuty. Odbijaj piłkę jak najdłużej!\n\n' +
               'Naciśnij SPACJĘ, aby wybrać poziom trudności\n' +
               'ESC - wyjście bez zapisu',
@@ -603,11 +603,11 @@ function gameRoutineEachFrame() {
             leftPaddle.setPos([leftPos[0], Math.max(leftPos[1] - paddleSpeed, -0.5 + paddleHalfHeight)]);
         }
         
-        // Right paddle (Arrow keys)
-        if (keysPressed['ArrowUp']) {
+        // Right paddle (Arrow keys or O/L)
+        if (keysPressed['ArrowUp'] || keysPressed['o'] || keysPressed['O']) {
             rightPaddle.setPos([rightPos[0], Math.min(rightPos[1] + paddleSpeed, 0.5 - paddleHalfHeight)]);
         }
-        if (keysPressed['ArrowDown']) {
+        if (keysPressed['ArrowDown'] || keysPressed['l'] || keysPressed['L']) {
             rightPaddle.setPos([rightPos[0], Math.max(rightPos[1] - paddleSpeed, -0.5 + paddleHalfHeight)]);
         }
         

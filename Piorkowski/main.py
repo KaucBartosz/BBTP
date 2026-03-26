@@ -141,6 +141,8 @@ def main():
     circle_onset_time = None
     next_circle_time = TIME_BETWEEN_CIRCLES
     responded = False
+    waiting_for_release = False
+    circle_timeout = 0
     clicks_without_circle = 0  # Kliknięcia bez widocznego kółka
     
     prev_pressed = mouse.getPressed() or [0, 0, 0]
@@ -155,10 +157,24 @@ def main():
             escaped = True
             break
         
-        # Tworzenie nowego kółka w odpowiednim czasie
-        if t >= next_circle_time:
-            # Jeśli było poprzednie kółko i nie było reakcji - to miss
-            if current_circle is not None and not responded:
+        # Odczyt myszy
+        pressed = mouse.getPressed()
+        if pressed is not None and len(pressed) >= 3:
+            is_pressed_now = pressed[0] or pressed[1] or pressed[2]
+            is_new_click = is_pressed_now and not (prev_pressed[0] or prev_pressed[1] or prev_pressed[2])
+            prev_pressed = pressed
+        else:
+            is_pressed_now = False
+            is_new_click = False
+
+        # Jeśli gracz puścił przycisk, zaczynamy liczyć czas do kolejnego kółka
+        if waiting_for_release and not is_pressed_now:
+            waiting_for_release = False
+            next_circle_time = t + TIME_BETWEEN_CIRCLES * (0.4 + random.random() * 1.2)
+
+        # Sprawdzenie timeoutu dla widocznego kółka (miss)
+        if current_circle is not None and not responded:
+            if t >= circle_timeout:
                 miss_count += 1
                 trials_data.append({
                     'circleId': circle_id,
@@ -166,11 +182,15 @@ def main():
                     'miss': 1,
                     'rt': None
                 })
-            
-            # Nowe kółko
+                current_circle = None
+                # Po missie od razu odliczamy do następnego kółka
+                next_circle_time = t + TIME_BETWEEN_CIRCLES * (0.4 + random.random() * 1.2)
+
+        # Tworzenie nowego kółka
+        if current_circle is None and not waiting_for_release and t >= next_circle_time:
             circle_id += 1
-            random_x = (random.random() - 0.5) * 1.4  # Losowa pozycja X (z marginesem)
-            random_y = (random.random() - 0.3) * 0.8  # Losowa pozycja Y (góra ekranu)
+            random_x = (random.random() - 0.5) * 1.0  # Losowa pozycja X (±0.50, bez obrzeży)
+            random_y = -0.10 + random.random() * 0.53  # Losowa pozycja Y (od -0.10 do 0.43)
             
             current_circle = visual.Circle(
                 win,
@@ -183,8 +203,8 @@ def main():
             circle_onset_time = t
             responded = False
             
-            # Ustawienie czasu następnego kółka
-            next_circle_time = t + TIME_BETWEEN_CIRCLES
+            # Timeout kółka (ile czasu badany ma na kliknięcie)
+            circle_timeout = t + TIME_BETWEEN_CIRCLES * 1.5
         
         # Rysowanie kółka
         if current_circle is not None and not responded:
@@ -193,14 +213,7 @@ def main():
         # Rysowanie samochodu
         car.draw()
         
-        # Obsługa kliknięcia na samochód
-        pressed = mouse.getPressed()
-        if pressed is not None and len(pressed) >= 3:
-            is_new_click = (pressed[0] or pressed[1] or pressed[2]) and not (prev_pressed[0] or prev_pressed[1] or prev_pressed[2])
-            prev_pressed = pressed
-        else:
-            is_new_click = False
-        
+        # Obsługa kliknięcia mychy
         if current_circle is not None and not responded and is_new_click and circle_onset_time is not None:
             if car.contains(mouse.getPos()):
                 responded = True
@@ -215,6 +228,10 @@ def main():
                     'miss': 0,
                     'rt': rt
                 })
+                
+                # Znika kółko i zaczynamy czekać na puszczenie
+                current_circle = None
+                waiting_for_release = True
         
         # Kliknięcie bez widocznego kółka
         if is_new_click and (current_circle is None or responded):

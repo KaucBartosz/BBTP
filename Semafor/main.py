@@ -44,7 +44,7 @@ def main():
     instr = visual.TextStim(
         win, text=INSTRUCTION,
         color='white', height=0.05,
-        wrapWidth=1.8, alignText='center',
+        wrapWidth=1.2, alignText='center',
     )
     instr.draw()
     win.flip()
