@@ -54,7 +54,7 @@ def main():
 
     instr = visual.TextStim(
         win,
-        text='Za chwilę zobaczysz dwa samochody i dwie sygnalizacje świetlne. Za pomocą strzałek na klawiaturze lub przycisków A (prawo)/D (lewo), wskaż ten z samochodów, przy którym z sygnalizacja zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.',
+        text='Za chwilę zobaczysz dwa samochody i dwie sygnalizacje świetlne. \nZa pomocą strzałek na klawiaturze wskaż ten z samochodów, przy którym sygnalizacja zmieni kolor na zielony. \nStaraj się reagować najszybciej jak potrafisz. \nAby rozpocząć zadanie, wciśnij SPACJĘ.',
         color='white', height=0.05, wrapWidth=1.8, alignText='center',
     )
     instr.draw()
@@ -106,13 +106,13 @@ def main():
 
             if clicked_side is None:
                 # Klawiatura
-                keys = event.getKeys(keyList=['left', 'right', 'a', 'd'])
+                keys = event.getKeys(keyList=['left', 'right'])
                 if keys:
                     k = keys[0]
-                    if k in ('left', 'a'):
+                    if k == 'left':
                         clicked_side = 'left' if t >= GREEN_ONSET else 'early'
                         rt_sec = (t - GREEN_ONSET) if t >= GREEN_ONSET else 0
-                    elif k in ('right', 'd'):
+                    elif k == 'right':
                         clicked_side = 'right' if t >= GREEN_ONSET else 'early'
                         rt_sec = (t - GREEN_ONSET) if t >= GREEN_ONSET else 0
 
