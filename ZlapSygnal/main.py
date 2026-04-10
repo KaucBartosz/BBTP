@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Piorkowski – wersja PsychoPy (HPM / Nous).
+Złap Sygnał – wersja PsychoPy (HPM / Nous).
 Test Aparatu Piórkowskiego: Ocena koordynacji wzrokowo-ruchowej.
 Na ekranie pojawiają się czerwone kółka - zadaniem jest kliknięcie na samochód.
 """
@@ -40,7 +40,7 @@ DURATION_SELECTION_TEXT = (
 
 def _write_results(script_dir, trials_data, correct_count, miss_count, total_circles, avg_rt_ms, selected_duration, clicks_without_circle):
     results = {
-        'testId': 'Piorkowski',
+        'testId': 'ZlapSygnal',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
         'ilosc_poprawnych_nacisniec': correct_count,
