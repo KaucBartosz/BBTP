@@ -187,7 +187,7 @@ async function experimentInit() {
   window.centerSquare = new visual.Rect({
     win: psychoJS.window,
     name: 'centerSquare',
-    width: 0.05, height: 0.05,
+    size: [0.05, 0.05],
     pos: [0, 0],
     fillColor: new util.Color('red'),
     lineColor: new util.Color('red'),
@@ -526,7 +526,6 @@ function trialRoutineBegin(snapshot) {
     window.correct = 0;
 
     window.waitingForCenter = false;
-    window.centerSquare.setAutoDraw(false);
 
     // Przywrócenie czerwonego koloru wszystkim światłom
     for (let r = 0; r < window.ROWS; r++) {
@@ -646,13 +645,12 @@ function trialRoutineEachFrame() {
     // 4. Koniec próby po odpowiednim czasie feedbacku
     if (window.responded && !window.waitingForCenter && window.feedbackClock.getTime() >= window.feedbackTime) {
       window.waitingForCenter = true;
-      window.centerSquare.setAutoDraw(true);
     }
 
     if (window.waitingForCenter) {
+      window.centerSquare.draw();
       let mousePos = mouse.getPos();
       if (pointInStim(mousePos[0], mousePos[1], window.centerSquare)) {
-        window.centerSquare.setAutoDraw(false);
         continueRoutine = false;
       }
     }
