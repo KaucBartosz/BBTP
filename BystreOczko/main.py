@@ -23,7 +23,7 @@ REACTION_TIME_LIMIT_SEC = 3.0  # limit czasu na reakcję po zapaleniu zielonego 
 FEEDBACK_TIME = 0.5
 N_TRIALS = 5 if NOUS_TRAINING else 10
 
-INSTRUCTION = 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz. Aby rozpocząć zadanie, wciśnij SPACJĘ.'
+INSTRUCTION = 'Za chwilę na ekranie pojawią się sygnalizacje świetlne. Twoim zadaniem jest, za pomocą MYSZY, kliknąć na tę z sygnalizacji, w której światło zmieni kolor na zielony. Staraj się reagować najszybciej jak potrafisz.\n\nGdy sygnalizacje zgasną, umieść kursor myszki na małym czerwonym kwadracie na środku ekranu, aby rozpocząć kolejną rundę.\n\nAby rozpocząć zadanie, wciśnij SPACJĘ.'
 
 
 def _write_results(script_dir, trials_data, correct_count, wrong_count, no_response_count, total_clicks, avg_rt_ms):
@@ -207,6 +207,22 @@ def main():
                 lights[r][c].draw()
         win.flip()
         core.wait(FEEDBACK_TIME)
+
+        center_square = visual.Rect(win, width=0.05, height=0.05, pos=(0,0), fillColor='red', lineColor='red')
+        
+        while True:
+            for r in range(ROWS):
+                for c in range(COLS):
+                    lights[r][c].draw()
+            center_square.draw()
+            win.flip()
+            
+            if event.getKeys(keyList=['escape']):
+                escaped = True
+                break
+                
+            if center_square.contains(mouse.getPos()):
+                break
 
         trials_data.append({
             'greenOnset': green_onset,
