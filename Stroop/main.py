@@ -112,9 +112,9 @@ def main():
         win.flip()
         
         trial_clock = core.Clock()
-        keys = event.waitKeys(keyList=['1', '2', '3', '4', 'escape'], maxWait=10.0)
+        keys = event.waitKeys(keyList=['1', '2', '3', '4', 'escape'], maxWait=5.0)
         
-        # Timeout (brak odpowiedzi w 10s)
+        # Timeout (brak odpowiedzi w 5s)
         if keys is None:
             trials_data.append({
                 'trial': i + 1,

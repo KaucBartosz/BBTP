@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Poppel – wersja PsychoPy (HPM / Nous).
+Fabryka figur – wersja PsychoPy (HPM / Nous).
 Dwa cele na górze; obiekty przesuwają się w dwóch rzędach na dole.
 Zadanie: klikać w obiekty pasujące do celów.
 Cele zmieniają się co 20 s. Czas reakcji nie jest zbierany.
@@ -31,7 +31,7 @@ DIFFICULTY_CONFIG = {
     'hard':   {'label': 'Trudny', 'shapes': 5, 'colors': 5, 'speed_mult': 1.35},
 }
 
-DURATION_OPTIONS = [40, 120, 300]
+DURATION_OPTIONS = [40, 180, 300]
 TARGET_CHANGE_INTERVAL = 20.0  # seconds
 TARGET_RATIO = 0.4  # 40% minimum good figures
 N_TARGETS = 2
@@ -86,7 +86,7 @@ def make_sequence_with_target_ratio(pool, targets, n):
 def _write_results(script_dir, clicked_records, poprawne, bledne, wszystkie,
                    obiekty, accuracy, detection_rate, diff_label, duration, pominiete=0):
     results = {
-        'testId': 'Poppelv2',
+        'testId': 'FabrykaFigur',
         'subjectId': f'{random.randint(0, 999999):06d}',
         'timestamp': datetime.utcnow().isoformat() + 'Z',
         'ilosc_poprawnych_nacisniec': poprawne,
@@ -186,7 +186,7 @@ def main():
         win,
         text=('Wybierz czas trwania testu:\n\n'
               '1 – 40 sekund\n'
-              '2 – 120 sekund\n'
+              '2 – 180 sekund\n'
               '3 – 300 sekund\n\n'
               'Naciśnij 1, 2 lub 3.'),
         color='white', height=0.045, wrapWidth=1.6, alignText='center',
