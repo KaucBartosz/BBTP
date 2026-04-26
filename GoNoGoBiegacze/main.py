@@ -123,7 +123,7 @@ def main():
     # --- Wybór trybu ---
     mode_text = visual.TextStim(
         win,
-        text='Wybierz tryb:\n\n1 - Test (tylko test)\n2 - Trening (zawiera test po treningu)\n\nNaciśnij 1 lub 2.',
+        text='Wybierz tryb:\n\n1 - Badanie\n2 - Trening + Badanie\n\nNaciśnij 1 lub 2.',
         color='white', height=0.05, wrapWidth=1.8, alignText='center',
     )
     mode_text.draw()

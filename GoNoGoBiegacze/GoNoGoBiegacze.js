@@ -56,7 +56,7 @@ async function experimentInit() {
   globalClock = new util.Clock();
   routineTimer = new util.CountdownTimer();
 
-  modeText = new visual.TextStim({ win: psychoJS.window, name: 'modeText', text: 'Wybierz tryb:\n1 - Test\n2 - Trening (zawiera test po treningu)', height: 0.05 });
+  modeText = new visual.TextStim({ win: psychoJS.window, name: 'modeText', text: 'Wybierz tryb:\n1 - Badanie\n2 - Trening + Badanie', height: 0.05 });
   modeKey = new core.Keyboard({ psychoJS, clock: new util.Clock(), waitForStart: true });
 
   instrText = new visual.TextStim({ win: psychoJS.window, name: 'instrText', text: 'Zadanie Go/No-Go\n\nNaciśnij SPACJĘ, gdy zobaczysz cyfrę NIEPARZYSTĄ (1, 3, 7, 9).\nNIE naciskaj niczego, gdy zobaczysz cyfrę PARZYSTĄ (2, 4, 6, 8).\n\nNaciśnij SPACJĘ, aby rozpocząć.', height: 0.05 });
@@ -76,6 +76,36 @@ async function experimentInit() {
   if (typeof window.electronTest !== 'undefined') {
     psychoJS.experiment.save = () => Promise.resolve();
   }
+
+  // --- Obsługa ekranu dotykowego (GO = dowolne dotknięcie) ---
+  window._touchJustStarted = false;
+  window._touchPsychoX = null;
+  window._touchPsychoY = null;
+  window._touchCanvas = null;
+  let canvas = (psychoJS.window._renderer && psychoJS.window._renderer.view) || document.querySelector('canvas');
+  if (canvas) {
+    window._touchCanvas = canvas;
+    function touchToPsycho(clientX, clientY) {
+      let r = canvas.getBoundingClientRect();
+      let aspect = r.width / r.height;
+      return {
+        x: (2 * (clientX - r.left) / r.width - 1) * aspect,
+        y: 1 - 2 * (clientY - r.top) / r.height
+      };
+    }
+    canvas.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        let p = touchToPsycho(e.touches[0].clientX, e.touches[0].clientY);
+        window._touchJustStarted = true;
+        window._touchPsychoX = p.x;
+        window._touchPsychoY = p.y;
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  }
+
   return Scheduler.Event.NEXT;
 }
 
@@ -88,6 +118,9 @@ function modeRoutineBegin() {
 }
 function modeRoutineEachFrame() {
   return async function () {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
     let keys = modeKey.getKeys({ keyList: ['1', '2'], waitRelease: false });
     if (keys.length > 0) {
       window.expMode = keys[0].name === '2' ? 'training' : 'test';
@@ -113,7 +146,16 @@ function instructionsRoutineBegin() {
 }
 function instructionsRoutineEachFrame() {
   return async function () {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
     let keys = instrKey.getKeys({ keyList: ['space'], waitRelease: false });
+
+    if (window._touchJustStarted && window._touchCanvas) {
+      keys = keys.concat([{ name: 'space', rt: instrKey.clock.getTime(), duration: 0 }]);
+      window._touchJustStarted = false;
+    }
+
     if (keys.length > 0) return Scheduler.Event.NEXT;
     return Scheduler.Event.FLIP_REPEAT;
   }
@@ -187,7 +229,10 @@ function blocksLoopBegin(scheduler) {
     psychoJS.experiment.addLoop(blocksLoop);
     for (const block of blocksLoop) {
       let bSnap = blocksLoop.getSnapshot();
-      scheduler.add(testLoopBegin(bSnap, scheduler));
+      const testScheduler = new Scheduler(psychoJS);
+      scheduler.add(testLoopBegin(bSnap, testScheduler));
+      scheduler.add(testScheduler);
+      scheduler.add(testLoopEnd);
       scheduler.add(breakRoutineBegin(bSnap));
       scheduler.add(breakRoutineEachFrame());
       scheduler.add(breakRoutineEnd());
@@ -196,13 +241,11 @@ function blocksLoopBegin(scheduler) {
     return Scheduler.Event.NEXT;
   }
 }
-function testLoopBegin(bSnap, parentScheduler) {
+function testLoopBegin(bSnap, testScheduler) {
   return async function () {
     let trialsArr = generateBlock(40, 10, 3); // 50 trials, 80% Go, 20% NoGo
     testLoop = new TrialHandler({ psychoJS, nReps: 1, method: TrialHandler.Method.SEQUENTIAL, trialList: trialsArr, name: 'testLoop' });
     psychoJS.experiment.addLoop(testLoop);
-    const testScheduler = new Scheduler(psychoJS);
-    parentScheduler.add(testScheduler);
     for (const trial of testLoop) {
       let snapshot = testLoop.getSnapshot();
       testScheduler.add(importConditions(snapshot));
@@ -211,7 +254,6 @@ function testLoopBegin(bSnap, parentScheduler) {
       testScheduler.add(trialRoutineEnd(snapshot, false));
       testScheduler.add(loopEndIteration(testScheduler, snapshot));
     }
-    parentScheduler.add(testLoopEnd);
     return Scheduler.Event.NEXT;
   }
 }
@@ -250,11 +292,20 @@ function trialRoutineBegin(snapshot, isTraining) {
     trialClock.reset();
     window.trialResponded = false;
     trialDuration = window.currentTrial.soa;
+
+    // Reset stanu dotyku na początek próby
+    window._touchJustStarted = false;
+    window._touchPsychoX = null;
+    window._touchPsychoY = null;
+
     return Scheduler.Event.NEXT;
   }
 }
 function trialRoutineEachFrame(isTraining) {
   return async function () {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
     tTrial = trialClock.getTime();
 
     // Bodziec widoczny 500ms
@@ -266,6 +317,15 @@ function trialRoutineEachFrame(isTraining) {
     // Okno reakcji 1000ms
     if (tTrial <= 1.0 && !window.trialResponded) {
       let keys = trialKey.getKeys({ keyList: ['space'], waitRelease: false });
+
+      // Dotyk ekranu traktujemy jak naciśnięcie SPACJI (GO)
+      if (window._touchJustStarted && window._touchCanvas) {
+        keys = keys.concat([{ name: 'space', rt: trialKey.clock.getTime(), duration: 0 }]);
+        window._touchJustStarted = false;
+        window._touchPsychoX = null;
+        window._touchPsychoY = null;
+      }
+
       if (keys.length > 0) {
         trialKey.keys = keys[0].name;
         trialKey.rt = keys[0].rt;
@@ -342,6 +402,9 @@ function feedbackRoutineBegin(snapshot) {
 }
 function feedbackRoutineEachFrame() {
   return async function () {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
     if (feedbackClock.getTime() >= 0.5) return Scheduler.Event.NEXT;
     return Scheduler.Event.FLIP_REPEAT;
   }
@@ -363,8 +426,17 @@ function breakRoutineBegin(snapshot) {
 }
 function breakRoutineEachFrame() {
   return async function () {
+    if (psychoJS.experiment.experimentEnded || psychoJS.eventManager.getKeys({ keyList: ['escape'] }).length > 0) {
+      return quitPsychoJS('The [Escape] key was pressed. Goodbye!', false);
+    }
     if (blocksLoop.thisN === 3) return Scheduler.Event.NEXT;
     let keys = breakKey.getKeys({ keyList: ['space'], waitRelease: false });
+
+    if (window._touchJustStarted && window._touchCanvas) {
+      keys = keys.concat([{ name: 'space', rt: breakKey.clock.getTime(), duration: 0 }]);
+      window._touchJustStarted = false;
+    }
+
     if (keys.length > 0) return Scheduler.Event.NEXT;
     return Scheduler.Event.FLIP_REPEAT;
   }
