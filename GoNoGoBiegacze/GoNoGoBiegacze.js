@@ -37,7 +37,7 @@ flowScheduler.add(blocksLoopEnd);
 flowScheduler.add(quitPsychoJS, 'Dziękujemy za udział w badaniu.', true);
 dialogCancelScheduler.add(quitPsychoJS, 'Dziękujemy za udział w badaniu.', false);
 
-psychoJS.start({ expName, expInfo });
+psychoJS.start({ expName, expInfo, resources: [] });
 
 let globalClock, routineTimer;
 let modeText, modeKey;
