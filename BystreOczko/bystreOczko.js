@@ -774,12 +774,12 @@ async function quitPsychoJS(message, isCompleted) {
           noResponseCount++;
         }
         let rtSec = (typeof trial.rt === 'number' && trial.rt >= 0) ? trial.rt : REACTION_TIME_LIMIT_SEC;
-        sumRT += rtSec;
+        sumRT += rtSec * 1000;
       }
 
       let totalClicks = correctCount + wrongCount;
       let nTrials = allData.length;
-      let avgRTms = nTrials > 0 ? Math.round((sumRT / nTrials) * 1000) : 0;
+      let avgRTms = nTrials > 0 ? Math.round(sumRT / nTrials) : 0;
 
       window.electronTest.sendResults({
         testId: expInfo['expName'],
