@@ -362,7 +362,7 @@ function trialRoutineEachFrame() {
         let key = theseKeys[0].name;
         if (key === 'escape') return quitPsychoJS('Przerwano.', false);
 
-        let rt_val = Math.round((theseKeys[0].rt - 0.5) * 1000); // RT od momentu pojawienia słowa (ms)
+        let rt_val = Math.round((theseKeys[0].rt - targetText.tStart) * 1000); // RT od momentu pojawienia słowa (ms)
         let correct = (key === correctKey) ? 1 : 0;
         psychoJS.experiment.addData('trial_n', trials_data.length + 1);
         psychoJS.experiment.addData('word', currentWord);
