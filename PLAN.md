@@ -15,8 +15,8 @@ Poprawka: użyć `performance.now()` / PsychoJS `util.Clock`. Zastosowano (brak 
 Problem: RT w sekundach, zaokrąglenia na końcu; JS mniej precyzyjny niż Python.
 Poprawka: per-trial RT w ms, uśrednianie zaokrąglonych ms. Zastosowano (brak testu przed/po — testy wymagają interakcji manualnej).
 
-## Faza 4 — GoNoGo, GoNoGoBiegacze, NWstecz, BystreOczko, Corsi
-Sprawdzić czy RT jest zbierane w wynikach (JS rt_refs niskie). Uzupełnić jeśli brakuje. Przetestować.
+## Faza 4 — GoNoGo, GoNoGoBiegacze, NWstecz, BystreOczko, Corsi (DONE)
+RT mierzone i zbierane w wynikach. Poprawiono uśrednianie RT (per-trial ms) we wszystkich pięciu testach, zgodnie z Pythonem.
 
 ## Faza 5 — Brakujące pola w sendResults
 Dodać blok `statystyki` i `pominiete` do JS sendResults (wszystkie testy).
