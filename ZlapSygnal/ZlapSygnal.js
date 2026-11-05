@@ -927,6 +927,13 @@ async function quitPsychoJS(message, isCompleted) {
         sredni_czas_reakcji: avgRT,
         klikniecia_bez_kolka: window.clicksWithoutCircle,
         score: `Poprawne: ${window.correctCount} | Misses: ${window.missCount} | Bez kółka: ${window.clicksWithoutCircle} | Łącznie: ${totalCircles} | Śr. RT: ${avgRT} ms`,
+        statystyki: {
+          sredni_czas_ms: avgRT,
+          poprawne_reakcje: window.correctCount,
+          wszystkie_proby: totalCircles,
+          bledne_reakcje: window.missCount,
+          skutecznosc: Math.round((window.correctCount / totalCircles) * 100)
+        },
         wyniki: window.trialResults
       });
     } else {

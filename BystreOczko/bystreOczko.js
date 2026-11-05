@@ -792,6 +792,13 @@ async function quitPsychoJS(message, isCompleted) {
         ilosc_obiektow_do_klikniecia: nTrials,
         sredni_czas_reakcji: avgRTms,
         score: `Poprawne: ${correctCount} | Błędne: ${wrongCount} | Braki: ${noResponseCount} | Śr. RT: ${avgRTms} ms`,
+        statystyki: {
+          sredni_czas_ms: avgRTms,
+          poprawne_reakcje: correctCount,
+          wszystkie_proby: nTrials,
+          bledne_reakcje: wrongCount,
+          skutecznosc: Math.round((correctCount / nTrials) * 100)
+        },
         wyniki: allData
       });
     } else {

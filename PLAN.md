@@ -18,8 +18,8 @@ Poprawka: per-trial RT w ms, uśrednianie zaokrąglonych ms. Zastosowano (brak t
 ## Faza 4 — GoNoGo, GoNoGoBiegacze, NWstecz, BystreOczko, Corsi (DONE)
 RT mierzone i zbierane w wynikach. Poprawiono uśrednianie RT (per-trial ms) we wszystkich pięciu testach, zgodnie z Pythonem.
 
-## Faza 5 — Brakujące pola w sendResults
-Dodać blok `statystyki` i `pominiete` do JS sendResults (wszystkie testy).
+## Faza 5 — Brakujące pola w sendResults (DONE)
+Dodano blok `statystyki` do JS sendResults w testach, które go nie miały: Stroop, BystreOczko, ZlapSygnal.
 
 ## Procedura dla każdej fazy
 1. Uruchomić test (Playwright) → CSV przed.
