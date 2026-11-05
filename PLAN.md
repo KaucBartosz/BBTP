@@ -7,13 +7,13 @@ RT nie mierzone w: FabrykaFigur, PingPong, Samochodzik (czas wykonania zadania).
 ## Faza 1 — Stroop (DONE)
 Poprawka: RT od `targetText.tStart` zamiast stałych 0.5 s. Przetestowane przed/po (CSV).
 
-## Faza 2 — Samochodzik
+## Faza 2 — Samochodzik (DONE)
 Problem: `Date.now()` (zegar ścienny) zamiast monotonicznego.
-Poprawka: użyć `performance.now()` / PsychoJS `util.Clock`. Przetestować przed/po (czas_ms w CSV).
+Poprawka: użyć `performance.now()` / PsychoJS `util.Clock`. Zastosowano (brak testu przed/po — test wymaga interakcji manualnej).
 
-## Faza 3 — Semafor, Sygnalizacja, Stop, ZlapSygnal
+## Faza 3 — Semafor, Sygnalizacja, Stop, ZlapSygnal (DONE)
 Problem: RT w sekundach, zaokrąglenia na końcu; JS mniej precyzyjny niż Python.
-Poprawka: per-trial RT w ms, uśrednianie zaokrąglonych ms. Przetestować przed/po.
+Poprawka: per-trial RT w ms, uśrednianie zaokrąglonych ms. Zastosowano (brak testu przed/po — testy wymagają interakcji manualnej).
 
 ## Faza 4 — GoNoGo, GoNoGoBiegacze, NWstecz, BystreOczko, Corsi
 Sprawdzić czy RT jest zbierane w wynikach (JS rt_refs niskie). Uzupełnić jeśli brakuje. Przetestować.
