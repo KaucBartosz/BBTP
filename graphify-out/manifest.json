@@ -1,0 +1,248 @@
+{
+  ".vscode/settings.json": {
+    "mtime": 1772100153.5950181,
+    "seen": 1794206746.0143516,
+    "ast_hash": "fdb8e89c302d988c6d9658561072914e",
+    "semantic_hash": "fdb8e89c302d988c6d9658561072914e"
+  },
+  "BystreOczko/bystreOczko.js": {
+    "mtime": 1775801952.0369346,
+    "seen": 1794206746.0143614,
+    "ast_hash": "a198a7832de21b0f0d3f23e35bbc716c",
+    "semantic_hash": "a198a7832de21b0f0d3f23e35bbc716c"
+  },
+  "BystreOczko/main.py": {
+    "mtime": 1775801276.1344242,
+    "seen": 1794206746.014366,
+    "ast_hash": "e8bc07b8bc51c69ff1efc0f8a95b1fbb",
+    "semantic_hash": "e8bc07b8bc51c69ff1efc0f8a95b1fbb"
+  },
+  "Corsi/corsi.js": {
+    "mtime": 1777535002.035552,
+    "seen": 1794206746.0143685,
+    "ast_hash": "def5e51b7e9d8993407b084702dcf175",
+    "semantic_hash": "def5e51b7e9d8993407b084702dcf175"
+  },
+  "Corsi/main.py": {
+    "mtime": 1777534725.6509914,
+    "seen": 1794206746.014371,
+    "ast_hash": "56d8e8884e10da11e554c4524a2f763e",
+    "semantic_hash": "56d8e8884e10da11e554c4524a2f763e"
+  },
+  "FabrykaFigur/FabrykaFigur.js": {
+    "mtime": 1777533238.9530797,
+    "seen": 1794206746.014373,
+    "ast_hash": "ab5b6ba3fef1d2a98de76e0dba6d407a",
+    "semantic_hash": "ab5b6ba3fef1d2a98de76e0dba6d407a"
+  },
+  "FabrykaFigur/main.py": {
+    "mtime": 1775799991.14883,
+    "seen": 1794206746.0143757,
+    "ast_hash": "26f523417d218b34b074c3d5ec358ee8",
+    "semantic_hash": "26f523417d218b34b074c3d5ec358ee8"
+  },
+  "GoNoGoBiegacze/GoNoGoBiegacze.js": {
+    "mtime": 1777533238.9911866,
+    "seen": 1794206746.014378,
+    "ast_hash": "0f9fd533d49f7deba864fe2ac581e9a3",
+    "semantic_hash": "0f9fd533d49f7deba864fe2ac581e9a3"
+  },
+  "GoNoGoBiegacze/main.py": {
+    "mtime": 1777533239.0864122,
+    "seen": 1794206746.0143805,
+    "ast_hash": "0fe5fe4bff3cb5cde3c8b2453df7574b",
+    "semantic_hash": "0fe5fe4bff3cb5cde3c8b2453df7574b"
+  },
+  "GoNoGo/GoNoGo.js": {
+    "mtime": 1774593281.071817,
+    "seen": 1794206746.0143824,
+    "ast_hash": "f499daec6a31ae994ba55ec10595df64",
+    "semantic_hash": "f499daec6a31ae994ba55ec10595df64"
+  },
+  "GoNoGo/main.py": {
+    "mtime": 1774593281.072825,
+    "seen": 1794206746.014384,
+    "ast_hash": "7ff9915f32dcdd6e2e4eaaa013eb3a15",
+    "semantic_hash": "7ff9915f32dcdd6e2e4eaaa013eb3a15"
+  },
+  "NWstecz/main.py": {
+    "mtime": 1774007333.5888221,
+    "seen": 1794206746.0143864,
+    "ast_hash": "18f4a9e6ec4ef08b611e42a12b042b8f",
+    "semantic_hash": "18f4a9e6ec4ef08b611e42a12b042b8f"
+  },
+  "NWstecz/nwstecz.js": {
+    "mtime": 1774007220.6486442,
+    "seen": 1794206746.0143888,
+    "ast_hash": "74690e88129e3b51e2ba8716c8230c64",
+    "semantic_hash": "74690e88129e3b51e2ba8716c8230c64"
+  },
+  "PingPong/main.py": {
+    "mtime": 1774593281.0883396,
+    "seen": 1794206746.0143907,
+    "ast_hash": "534ec2e1a3be8a4778ddc7c5ba6ab2ea",
+    "semantic_hash": "534ec2e1a3be8a4778ddc7c5ba6ab2ea"
+  },
+  "PingPong/pong.js": {
+    "mtime": 1774593281.08986,
+    "seen": 1794206746.014393,
+    "ast_hash": "e47d57386918f12b4d6f9e76285e79f7",
+    "semantic_hash": "e47d57386918f12b4d6f9e76285e79f7"
+  },
+  "Samochodzik/main.py": {
+    "mtime": 1773926414.734099,
+    "seen": 1794206746.0143952,
+    "ast_hash": "ad3a7c0f56fbb0f063fb6bc73313a92f",
+    "semantic_hash": "ad3a7c0f56fbb0f063fb6bc73313a92f"
+  },
+  "Samochodzik/samochodzik.js": {
+    "mtime": 1777533239.1237476,
+    "seen": 1794206746.0143971,
+    "ast_hash": "1961d9b4c8664af24c218878ccf17618",
+    "semantic_hash": "1961d9b4c8664af24c218878ccf17618"
+  },
+  "Semafor/main.py": {
+    "mtime": 1777538203.921905,
+    "seen": 1794206746.0143995,
+    "ast_hash": "96f8fa5fbd120edbdad8b16002c4622d",
+    "semantic_hash": "96f8fa5fbd120edbdad8b16002c4622d"
+  },
+  "Semafor/semafor.js": {
+    "mtime": 1777537811.2019854,
+    "seen": 1794206746.0144022,
+    "ast_hash": "f8d5611ebe27e87107317cd31fe5dcac",
+    "semantic_hash": "f8d5611ebe27e87107317cd31fe5dcac"
+  },
+  "Stop/main.py": {
+    "mtime": 1774526632.2718523,
+    "seen": 1794206746.0144038,
+    "ast_hash": "17874436ff839d6f4fa3c2ea338b73f9",
+    "semantic_hash": "17874436ff839d6f4fa3c2ea338b73f9"
+  },
+  "Stop/stop.js": {
+    "mtime": 1777533239.1697192,
+    "seen": 1794206746.0144055,
+    "ast_hash": "33c46e49b39f28fceeeeb16ddbdec39f",
+    "semantic_hash": "33c46e49b39f28fceeeeb16ddbdec39f"
+  },
+  "Stroop/main.py": {
+    "mtime": 1775799802.0689363,
+    "seen": 1794206746.0144074,
+    "ast_hash": "343bab9d89bf33eb83b7f97cb01e203f",
+    "semantic_hash": "343bab9d89bf33eb83b7f97cb01e203f"
+  },
+  "Stroop/stroop.js": {
+    "mtime": 1777533239.1864152,
+    "seen": 1794206746.01441,
+    "ast_hash": "387f860da93ea6e1a766ba6c7f66f619",
+    "semantic_hash": "387f860da93ea6e1a766ba6c7f66f619"
+  },
+  "Sygnalizacja/main.py": {
+    "mtime": 1775800356.4714015,
+    "seen": 1794206746.014412,
+    "ast_hash": "e4e95a6b88a978eed47734d86b222ee6",
+    "semantic_hash": "e4e95a6b88a978eed47734d86b222ee6"
+  },
+  "Sygnalizacja/syg.js": {
+    "mtime": 1777533239.2030911,
+    "seen": 1794206746.014414,
+    "ast_hash": "b5ccdd375cb4a38f2ae2c92b6364d1d3",
+    "semantic_hash": "b5ccdd375cb4a38f2ae2c92b6364d1d3"
+  },
+  "ZlapSygnal/ZlapSygnal.js": {
+    "mtime": 1777533239.2196915,
+    "seen": 1794206746.0144162,
+    "ast_hash": "d428a1b268e49702b04735f3090a7722",
+    "semantic_hash": "d428a1b268e49702b04735f3090a7722"
+  },
+  "ZlapSygnal/main.py": {
+    "mtime": 1775800531.2007158,
+    "seen": 1794206746.0144184,
+    "ast_hash": "b2fbf4bcd8077f40afe5adf959faed8e",
+    "semantic_hash": "b2fbf4bcd8077f40afe5adf959faed8e"
+  },
+  "codebase-config.json": {
+    "mtime": 1773924134.5187654,
+    "seen": 1794206746.0144205,
+    "ast_hash": "cba9d6b752bb7805d00a3d00c2402126",
+    "semantic_hash": "cba9d6b752bb7805d00a3d00c2402126"
+  },
+  "BystreOczko/index.html": {
+    "mtime": 1771826580.8886964,
+    "seen": 1794206746.0144224,
+    "ast_hash": "050aad1a196c5e57a0d2be631a1c2ea5",
+    "semantic_hash": "050aad1a196c5e57a0d2be631a1c2ea5"
+  },
+  "Corsi/index.html": {
+    "mtime": 1773995271.0220723,
+    "seen": 1794206746.0144246,
+    "ast_hash": "32df97ba549094bb4c21b032e6236238",
+    "semantic_hash": "32df97ba549094bb4c21b032e6236238"
+  },
+  "FabrykaFigur/index.html": {
+    "mtime": 1775799995.1703053,
+    "seen": 1794206746.0144267,
+    "ast_hash": "00e7a53c865d0c8087e907ff68527b7e",
+    "semantic_hash": "00e7a53c865d0c8087e907ff68527b7e"
+  },
+  "GoNoGoBiegacze/index.html": {
+    "mtime": 1777533238.9911866,
+    "seen": 1794206746.0144286,
+    "ast_hash": "03564561d4c04142209eaa0032062ea7",
+    "semantic_hash": "03564561d4c04142209eaa0032062ea7"
+  },
+  "GoNoGo/index.html": {
+    "mtime": 1771826581.0051427,
+    "seen": 1794206746.014431,
+    "ast_hash": "ba72b9ec67a02faafc67a4e67bc41178",
+    "semantic_hash": "ba72b9ec67a02faafc67a4e67bc41178"
+  },
+  "NWstecz/index.html": {
+    "mtime": 1774002154.23791,
+    "seen": 1794206746.014433,
+    "ast_hash": "29e403697f7d5529765dd293dd932d0d",
+    "semantic_hash": "29e403697f7d5529765dd293dd932d0d"
+  },
+  "PingPong/index.html": {
+    "mtime": 1771845895.9693341,
+    "seen": 1794206746.0144353,
+    "ast_hash": "c5f2bf373d15bb7708a805bdd79b2611",
+    "semantic_hash": "c5f2bf373d15bb7708a805bdd79b2611"
+  },
+  "Samochodzik/index.html": {
+    "mtime": 1772085858.6652496,
+    "seen": 1794206746.0144374,
+    "ast_hash": "f9a99bab40a80bc82d6ead6ff9b1a222",
+    "semantic_hash": "f9a99bab40a80bc82d6ead6ff9b1a222"
+  },
+  "Semafor/index.html": {
+    "mtime": 1771826581.288461,
+    "seen": 1794206746.0144393,
+    "ast_hash": "79f6ebd6b4acaad6ea0a265f0035017b",
+    "semantic_hash": "79f6ebd6b4acaad6ea0a265f0035017b"
+  },
+  "Stop/index.html": {
+    "mtime": 1771826581.3547063,
+    "seen": 1794206746.0144417,
+    "ast_hash": "39d6a240e4a64d6edbd00d3fd793737a",
+    "semantic_hash": "39d6a240e4a64d6edbd00d3fd793737a"
+  },
+  "Stroop/index.html": {
+    "mtime": 1773127790.7342496,
+    "seen": 1794206746.0144439,
+    "ast_hash": "d22e797e6899c70f25a7d49805e1241b",
+    "semantic_hash": "d22e797e6899c70f25a7d49805e1241b"
+  },
+  "Sygnalizacja/index.html": {
+    "mtime": 1771826581.404735,
+    "seen": 1794206746.014446,
+    "ast_hash": "4128195702c56f5ab41c0abd844330b7",
+    "semantic_hash": "4128195702c56f5ab41c0abd844330b7"
+  },
+  "ZlapSygnal/index.html": {
+    "mtime": 1775800531.979546,
+    "seen": 1794206746.0144484,
+    "ast_hash": "ff182bcc0c4f1010e84ef28b6fdaf51c",
+    "semantic_hash": "ff182bcc0c4f1010e84ef28b6fdaf51c"
+  }
+}
