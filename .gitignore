@@ -3,3 +3,7 @@ Samochodzik/python_env/
 Samochodzik/PORADNIK_AGENTA.md
 
 .gitnexus
+
+# Test artifacts (Stop)
+Stop/out/
+Stop/tests/
