@@ -7,3 +7,12 @@ Samochodzik/PORADNIK_AGENTA.md
 # Test artifacts (Stop)
 Stop/out/
 Stop/tests/
+
+# Pliki pomocnicze i artefakty
+*.csv
+*.py
+playwright_*.js
+testfile.txt
+RAPORT_SENDRESULTS.md
+STATYSTYKA.md
+PLAN.md
